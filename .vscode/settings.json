@@ -1,0 +1,21 @@
+{
+    "files.exclude": {
+      "build/": true,
+      "android/": true,
+      "ios/": true,
+      "web/": true,
+      "windows/": true,
+      "linux/": true,
+      "macos/": true
+      "test/": true
+      "**/.dart_tool": true,
+      "**/.idea": true,
+      "**/.flutter-plugins": true,
+      "**/.flutter-plugins-dependencies": true,
+      "**/.metadata": true,
+      "**/authors_toolbox.iml": true,
+      "**/pubspec.lock": true,
+      "analysis_options.yaml/": true
+    }
+  }
+  

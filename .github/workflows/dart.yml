@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:  # Add this to allow manual triggers
+  workflow_dispatch:  # Allow manual workflow triggers
 
 jobs:
   build:
@@ -15,23 +15,19 @@ jobs:
       # Checkout the code
       - uses: actions/checkout@v4
 
-      # Install the latest stable version of Flutter
+      # Set up Flutter environment
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'
+          flutter-version: 'stable'  # Explicitly set the Flutter version, or use 'stable'
 
       # Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # Analyze the project
+      # Analyze code
       - name: Analyze project source
         run: flutter analyze
 
       # Run tests
       - name: Run tests
         run: flutter test
-
-      # Uncomment this step if you want to verify code formatting
-      # - name: Verify code formatting
-      #   run: flutter format --set-exit-if-changed .

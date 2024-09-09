@@ -7,8 +7,11 @@ import 'dart:async';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:fl_chart/fl_chart.dart'; // Import fl_chart for graphs
 import 'package:intl/intl.dart'; // For date formatting
+import 'package:flutter/services.dart'; // Required for TextInputFormatter
 
+///////////////
 // Project model to store project details and word count progress entries
+///////////////
 class Project {
   String name;
   String description;
@@ -24,7 +27,6 @@ class Project {
     required this.wordCountEntries,
   });
 
-  // Convert Project to JSON
   Map<String, dynamic> toJson() => {
         'name': name,
         'description': description,
@@ -34,7 +36,6 @@ class Project {
             wordCountEntries.map((entry) => entry.toJson()).toList(),
       };
 
-  // Create Project from JSON
   factory Project.fromJson(Map<String, dynamic> json) {
     return Project(
       name: json['name'],
@@ -48,20 +49,20 @@ class Project {
   }
 }
 
-// WordCountEntry to record word count added and the timestamp
+///////////////
+// WordCountEntry to record word count added and timestamp
+///////////////
 class WordCountEntry {
   int wordsAdded;
   DateTime dateTime;
 
   WordCountEntry({required this.wordsAdded, required this.dateTime});
 
-  // Convert WordCountEntry to JSON
   Map<String, dynamic> toJson() => {
         'wordsAdded': wordsAdded,
         'dateTime': dateTime.toIso8601String(),
       };
 
-  // Create WordCountEntry from JSON
   factory WordCountEntry.fromJson(Map<String, dynamic> json) {
     return WordCountEntry(
       wordsAdded: json['wordsAdded'],
@@ -70,6 +71,55 @@ class WordCountEntry {
   }
 }
 
+class TimeInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    String oldText = oldValue.text;
+    String newText = newValue.text;
+
+    // Remove non-numeric characters from the input
+    String digitsOnly = newText.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // We maintain the fixed format: HH:MM:SS
+    String formattedTime = oldText;
+
+    // Calculate the cursor position before formatting
+    int cursorPosition = newValue.selection.start;
+
+    // Limit input to a maximum of 6 digits (HHMMSS)
+    if (digitsOnly.length > 6) {
+      digitsOnly = digitsOnly.substring(0, 6);
+    }
+
+    // Handle formatting by replacing the numeric placeholders in the existing formatted time
+    int digitIndex = 0;
+    for (int i = 0; i < formattedTime.length; i++) {
+      if (digitIndex < digitsOnly.length && i != 2 && i != 5) {
+        formattedTime =
+            formattedTime.replaceRange(i, i + 1, digitsOnly[digitIndex]);
+        digitIndex++;
+      }
+    }
+
+    // Adjust the cursor position to ensure it doesn't land on colons
+    if (cursorPosition == 2 || cursorPosition == 5) {
+      cursorPosition++;
+    }
+
+    // Ensure the cursor position stays within the formatted time
+    cursorPosition = cursorPosition.clamp(0, formattedTime.length);
+
+    return TextEditingValue(
+      text: formattedTime,
+      selection: TextSelection.collapsed(offset: cursorPosition),
+    );
+  }
+}
+
+///////////////
+// Stopwatch Widget to handle the timer and alarm functionality
+///////////////
 class StopwatchWidget extends StatefulWidget {
   @override
   _StopwatchWidgetState createState() => _StopwatchWidgetState();
@@ -80,25 +130,22 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
   int _seconds = 0;
   bool _isRunning = false;
   int? _alarmSeconds;
-  int _maxSeconds = 24 * 3600; // Max value set to 24 hours in seconds
+  int _maxSeconds = 24 * 3600; // 24 hours in seconds
   Color _progressColor = Colors.blueAccent;
 
-  // Controller for the Set Alarm input field
-  final TextEditingController _alarmController = TextEditingController();
+  final TextEditingController _alarmController =
+      TextEditingController(text: "00:00:00");
 
-  // Helper method to convert a string in 'HH:MM:SS' format to total seconds
+  // Convert formatted string (HH:MM:SS) to total seconds
   int _parseTimeToSeconds(String time) {
     final parts = time.split(':');
-    if (parts.length == 3) {
-      final hours = int.tryParse(parts[0]) ?? 0;
-      final minutes = int.tryParse(parts[1]) ?? 0;
-      final seconds = int.tryParse(parts[2]) ?? 0;
-      return (hours * 3600) + (minutes * 60) + seconds;
-    }
-    return 0;
+    final hours = int.tryParse(parts[0]) ?? 0;
+    final minutes = int.tryParse(parts[1]) ?? 0;
+    final seconds = int.tryParse(parts[2]) ?? 0;
+    return (hours * 3600) + (minutes * 60) + seconds;
   }
 
-  // Helper method to convert total seconds to 'HH:MM:SS' format
+  // Convert total seconds to formatted string (HH:MM:SS)
   String _formatTime(int seconds) {
     final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
     final minutes = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
@@ -124,12 +171,12 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
             _showAlarmDialog();
           }
 
-          if (_seconds >= _maxSeconds ||
-              (_alarmSeconds != null && _seconds >= _alarmSeconds!)) {
+          if (_seconds >= _maxSeconds) {
             _stopStopwatch();
           }
         });
       });
+
       setState(() {
         _isRunning = true;
       });
@@ -138,25 +185,37 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
 
   // Stop the stopwatch
   void _stopStopwatch() {
-    _timer.cancel();
-    setState(() {
-      _isRunning = false;
-    });
+    if (_isRunning && _timer.isActive) {
+      _timer.cancel();
+      setState(() {
+        _isRunning = false;
+      });
+    }
   }
 
   // Reset the stopwatch
   void _resetStopwatch() {
-    _timer.cancel();
+    if (_isRunning && _timer.isActive) {
+      _timer.cancel();
+    }
     setState(() {
       _seconds = 0;
       _isRunning = false;
       _alarmSeconds = null;
       _progressColor = Colors.blueAccent;
-      _alarmController.clear();
+      _alarmController.text = "00:00:00"; // Reset the input field to default
     });
   }
 
-  // Show an alarm dialog when time is up
+  // Set alarm time in seconds
+  void _setAlarm(int seconds) {
+    setState(() {
+      _alarmSeconds = seconds;
+      _progressColor = Colors.blueAccent;
+    });
+  }
+
+  // Show alarm dialog when time is up
   void _showAlarmDialog() {
     showDialog(
       context: context,
@@ -174,44 +233,6 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
           ],
         );
       },
-    );
-  }
-
-  // Set an alarm in seconds
-  void _setAlarm(int seconds) {
-    setState(() {
-      _alarmSeconds = seconds;
-      _progressColor = Colors.blueAccent;
-    });
-  }
-
-  // Automatically format the time input as HH:MM:SS
-  void _onAlarmTimeChanged(String value) {
-    String digitsOnly = value.replaceAll(
-        RegExp(r'[^0-9]'), ''); // Remove non-numeric characters
-    if (digitsOnly.length > 6) {
-      digitsOnly =
-          digitsOnly.substring(0, 6); // Limit input to 6 digits (HHMMSS)
-    }
-
-    String formattedTime;
-    if (digitsOnly.length <= 2) {
-      formattedTime = digitsOnly.padLeft(2, '0'); // Format as 'HH'
-    } else if (digitsOnly.length <= 4) {
-      formattedTime = digitsOnly.substring(0, 2) +
-          ':' +
-          digitsOnly.substring(2).padLeft(2, '0'); // Format as 'HH:MM'
-    } else {
-      formattedTime = digitsOnly.substring(0, 2) +
-          ':' +
-          digitsOnly.substring(2, 4) +
-          ':' +
-          digitsOnly.substring(4).padLeft(2, '0'); // Format as 'HH:MM:SS'
-    }
-
-    _alarmController.value = TextEditingValue(
-      text: formattedTime,
-      selection: TextSelection.collapsed(offset: formattedTime.length),
     );
   }
 
@@ -258,9 +279,11 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
               width: 150,
               child: TextField(
                 controller: _alarmController,
-                onChanged: _onAlarmTimeChanged, // Call the time formatter
                 decoration: InputDecoration(labelText: 'Set Alarm (HH:MM:SS)'),
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  TimeInputFormatter(), // Apply custom formatter to lock colons and allow numeric input
+                ],
               ),
             ),
           ],
@@ -270,16 +293,16 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
   }
 }
 
+///////////////
+// Progress Tracker Screen for managing projects and progress
+///////////////
 class ProgressTrackerScreen extends StatefulWidget {
   @override
   _ProgressTrackerScreenState createState() => _ProgressTrackerScreenState();
 }
 
 class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
-  // List to store projects
   List<Project> _projects = [];
-
-  // Controllers for text input fields
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _wordCountGoalController = TextEditingController();
@@ -290,7 +313,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     _loadProjects(); // Load projects when the screen initializes
   }
 
-  // Function to load projects from SharedPreferences
   Future<void> _loadProjects() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? projectsJson = prefs.getString('projects');
@@ -303,7 +325,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     }
   }
 
-  // Function to save projects to SharedPreferences
   Future<void> _saveProjects() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String projectsJson =
@@ -311,7 +332,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     await prefs.setString('projects', projectsJson);
   }
 
-  // Function to add a new project
   void _addProject() {
     if (_nameController.text.isEmpty ||
         _descriptionController.text.isEmpty ||
@@ -345,7 +365,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     _saveProjects(); // Save the updated project list to SharedPreferences
   }
 
-  // Function to edit a project
   void _editProject(int index) {
     _nameController.text = _projects[index].name;
     _descriptionController.text = _projects[index].description;
@@ -401,7 +420,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     );
   }
 
-  // Function to delete a project
   void _deleteProject(int index) {
     setState(() {
       _projects.removeAt(index);
@@ -409,7 +427,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     _saveProjects(); // Save to SharedPreferences after deletion
   }
 
-  // Function to add word count progress
   void _addWordCount(int index, int wordCount) {
     setState(() {
       _projects[index].currentWordCount += wordCount;
@@ -420,7 +437,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     _saveProjects(); // Save the updated project list to SharedPreferences
   }
 
-  // Function to show a dialog for adding word count
   void _showAddWordCountDialog(int index) {
     final _wordCountController = TextEditingController();
 
@@ -455,7 +471,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     );
   }
 
-// Calculate the average weekly word count
   double _calculateWeeklyAverage() {
     DateTime now = DateTime.now();
     DateTime oneWeekAgo = now.subtract(Duration(days: 7));
@@ -474,7 +489,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     return entryCount > 0 ? totalWords / entryCount : 0;
   }
 
-// Calculate the average monthly word count
   double _calculateMonthlyAverage() {
     DateTime now = DateTime.now();
     DateTime oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
@@ -493,17 +507,14 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     return entryCount > 0 ? totalWords / entryCount : 0;
   }
 
-  // Generate data for the word count graph for a specific project (weekly data points)
   List<FlSpot> _generateWordCountDataForProject(Project project) {
     List<FlSpot> spots = [];
     DateTime now = DateTime.now();
 
-    // Loop through the last 7 days and accumulate word counts for each day
     for (int i = 0; i < 7; i++) {
       DateTime day = now.subtract(Duration(days: i));
       int wordsForDay = 0;
 
-      // Sum up the word count for this day from the project's word count entries
       for (var entry in project.wordCountEntries) {
         if (DateFormat('yyyy-MM-dd').format(entry.dateTime) ==
             DateFormat('yyyy-MM-dd').format(day)) {
@@ -511,11 +522,9 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
         }
       }
 
-      // Add the day's total word count as a FlSpot (x = day index, y = words added)
       spots.add(FlSpot(i.toDouble(), wordsForDay.toDouble()));
     }
 
-    // Reverse the spots list to show the most recent day on the right
     return spots.reversed.toList();
   }
 
@@ -572,8 +581,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
               ],
             ),
             SizedBox(height: 20),
-
-            // Display the weekly and monthly averages
             Text(
               'Weekly Average Word Count: ${weeklyAverage.toStringAsFixed(1)}',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -584,7 +591,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
-
             Expanded(
               child: ListView.builder(
                 itemCount: _projects.length,
@@ -594,7 +600,6 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
                       ? 0.0
                       : project.currentWordCount / project.wordCountGoal;
 
-                  // Initialize wordCountData before it's used
                   List<FlSpot> wordCountData =
                       _generateWordCountDataForProject(project);
 

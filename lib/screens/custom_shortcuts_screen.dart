@@ -10,7 +10,8 @@ class CustomShortcutsScreen extends StatefulWidget {
 
 class _CustomShortcutsScreenState extends State<CustomShortcutsScreen> {
   List<String> customShortcuts = []; // List to store custom shortcuts
-  final TextEditingController _shortcutController = TextEditingController(); // Controller for shortcut input
+  final TextEditingController _shortcutController =
+      TextEditingController(); // Controller for shortcut input
 
   @override
   void initState() {

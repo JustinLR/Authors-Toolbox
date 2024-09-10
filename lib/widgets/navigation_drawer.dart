@@ -3,7 +3,7 @@ import 'package:authors_toolbox/screens/home_page.dart';
 import 'package:authors_toolbox/screens/book_hub_screen.dart';
 import 'package:authors_toolbox/screens/progress_tracker_screen.dart';
 import 'package:authors_toolbox/screens/thesaurus_screen.dart';
-import 'package:authors_toolbox/screens/assistant_screen.dart';
+import 'package:authors_toolbox/screens/story_builder_screen.dart';
 import 'package:authors_toolbox/screens/settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -138,11 +138,11 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
             },
           ),
           ListTile(
-            title: Text('Assistant'),
+            title: Text('Story Builder'),
             onTap: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => AssistantScreen()),
+                MaterialPageRoute(builder: (context) => StoryBuilderScreen()),
               );
             },
           ),

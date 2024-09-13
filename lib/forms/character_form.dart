@@ -70,6 +70,30 @@ class _CharacterFormState extends State<CharacterForm> {
               },
             ),
             SizedBox(height: 20),
+            _buildTextInputField(
+              labelText: 'Gender',
+              initialValue: _character.gender,
+              onSaved: (value) {
+                _character.gender = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Race',
+              initialValue: _character.race,
+              onSaved: (value) {
+                _character.race = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Occupation',
+              initialValue: _character.occupation,
+              onSaved: (value) {
+                _character.occupation = value;
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Dropdown for Role
             DropdownButtonFormField<String>(
               value: _character.role,
               decoration: InputDecoration(
@@ -89,6 +113,265 @@ class _CharacterFormState extends State<CharacterForm> {
               },
             ),
             SizedBox(height: 20),
+
+            // Physical Appearance
+            Text(
+              'Physical Appearance',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            _buildTextInputField(
+              labelText: 'Height',
+              initialValue: _character.height,
+              onSaved: (value) {
+                _character.height = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Weight',
+              initialValue: _character.weight,
+              onSaved: (value) {
+                _character.weight = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Build',
+              initialValue: _character.build,
+              onSaved: (value) {
+                _character.build = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Hair',
+              initialValue: _character.hair,
+              onSaved: (value) {
+                _character.hair = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Eyes',
+              initialValue: _character.eyes,
+              onSaved: (value) {
+                _character.eyes = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Skin',
+              initialValue: _character.skin,
+              onSaved: (value) {
+                _character.skin = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Clothing Style',
+              initialValue: _character.clothingStyle,
+              onSaved: (value) {
+                _character.clothingStyle = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Physical Traits',
+              initialValue: _character.physicalTraits,
+              onSaved: (value) {
+                _character.physicalTraits = value;
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Powers and Abilities
+            Text(
+              'Powers and Abilities',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            SwitchListTile(
+              title: Text('Has Powers'),
+              value: _character.hasPowers,
+              onChanged: (value) {
+                setState(() {
+                  _character.hasPowers = value;
+                });
+              },
+            ),
+            if (_character.hasPowers) ...[
+              _buildTextInputField(
+                labelText: 'Power Type',
+                initialValue: _character.powerType,
+                onSaved: (value) {
+                  _character.powerType = value;
+                },
+              ),
+              _buildTextInputField(
+                labelText: 'Power Origin',
+                initialValue: _character.powerOrigin,
+                onSaved: (value) {
+                  _character.powerOrigin = value;
+                },
+              ),
+            ],
+
+            // Skills, Weapons, and Weaknesses
+            _buildTextInputField(
+              labelText: 'Skills',
+              initialValue: _character.skills?.join(', '),
+              onSaved: (value) {
+                _character.skills =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Weapons',
+              initialValue: _character.weapons?.join(', '),
+              onSaved: (value) {
+                _character.weapons =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Weaknesses',
+              initialValue: _character.weaknesses?.join(', '),
+              onSaved: (value) {
+                _character.weaknesses =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Psychological Traits
+            Text(
+              'Psychological Traits',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            _buildTextInputField(
+              labelText: 'Motivation',
+              initialValue: _character.motivation,
+              onSaved: (value) {
+                _character.motivation = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Fears',
+              initialValue: _character.fears?.join(', '),
+              onSaved: (value) {
+                _character.fears =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Likes',
+              initialValue: _character.likes?.join(', '),
+              onSaved: (value) {
+                _character.likes =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Dislikes',
+              initialValue: _character.dislikes?.join(', '),
+              onSaved: (value) {
+                _character.dislikes =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Ticks/Quirks',
+              initialValue: _character.ticksOrQuirks?.join(', '),
+              onSaved: (value) {
+                _character.ticksOrQuirks =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Moral Alignment',
+              initialValue: _character.moralAlignment,
+              onSaved: (value) {
+                _character.moralAlignment = value;
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Backstory
+            Text(
+              'Backstory',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            _buildTextInputField(
+              labelText: 'Birthplace',
+              initialValue: _character.birthplace,
+              onSaved: (value) {
+                _character.birthplace = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Backstory Summary',
+              initialValue: _character.backstorySummary,
+              onSaved: (value) {
+                _character.backstorySummary = value;
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Key Life Events',
+              initialValue: _character.keyLifeEvents?.join(', '),
+              onSaved: (value) {
+                _character.keyLifeEvents =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Education/Training',
+              initialValue: _character.educationOrTraining,
+              onSaved: (value) {
+                _character.educationOrTraining = value;
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Relationships
+            Text(
+              'Relationships',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            _buildTextInputField(
+              labelText: 'Family',
+              initialValue: _character.family?.join(', '),
+              onSaved: (value) {
+                _character.family =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Romantic Relationships',
+              initialValue: _character.romanticRelationships?.join(', '),
+              onSaved: (value) {
+                _character.romanticRelationships =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Friends and Allies',
+              initialValue: _character.friendsAndAllies?.join(', '),
+              onSaved: (value) {
+                _character.friendsAndAllies =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Enemies',
+              initialValue: _character.enemies?.join(', '),
+              onSaved: (value) {
+                _character.enemies =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            _buildTextInputField(
+              labelText: 'Pets',
+              initialValue: _character.pets?.join(', '),
+              onSaved: (value) {
+                _character.pets =
+                    value?.split(',').map((s) => s.trim()).toList();
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Save Button
             ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {

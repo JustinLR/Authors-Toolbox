@@ -22,6 +22,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
   String _selectedModel = 'GPT-4o'; // Default to GPT-4
   List<String> _models = ['GPT-4o', 'GPT-4', 'GPT-3.5']; // Model options
 
+  bool _isResponseIncomplete =
+      false; // Add this line to track incomplete responses
+
   @override
   void initState() {
     super.initState();
@@ -37,18 +40,29 @@ class _AssistantScreenState extends State<AssistantScreen> {
         _apiKey = apiKey; // Set the API key in state
       });
     }
+    Future<void> _loadTokenUsage() async {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _totalTokensUsed = prefs.getInt('totalTokensUsed') ?? 0;
+      });
+    }
   }
 
-  // Function to send query to OpenAI API using the stored API key
+  Future<void> _saveTokenUsage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('totalTokensUsed', _totalTokensUsed);
+  }
+
   Future<void> _sendQuery() async {
     String query = _queryController.text.trim();
     if (query.isNotEmpty) {
       setState(() {
         _chatHistory.add({"user": query, "response": "Thinking..."});
+        _isResponseIncomplete =
+            false; // Reset the flag before sending a new query
       });
       _queryController.clear();
 
-      // Ensure API key is loaded before making the call
       if (_apiKey == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -58,60 +72,113 @@ class _AssistantScreenState extends State<AssistantScreen> {
       }
 
       try {
-        // Make the actual API call to OpenAI using the retrieved API key
         String response = await _callOpenAIAPI(query);
+
+        // Check if the response seems incomplete (adjust logic as needed)
+        if (response.length >= 100 || response.endsWith("...")) {
+          _isResponseIncomplete =
+              true; // Set the flag if the response is too long or cut off
+        }
+
         setState(() {
-          _chatHistory.last["response"] =
-              response; // Update with actual response
+          _chatHistory.last["response"] = response;
         });
       } catch (e) {
         setState(() {
-          _chatHistory.last["response"] = 'Error occurred: $e'; // Show error
+          _chatHistory.last["response"] = 'Error occurred: $e';
         });
       }
     }
   }
 
-  // Call OpenAI API with selected model
+  Future<void> _continueResponse() async {
+    if (_chatHistory.isEmpty) return;
+
+    // Get the last part of the conversation to provide context
+    String lastResponse = _chatHistory.last['response'] ?? '';
+    String continuePrompt = 'Continue the following response: "$lastResponse"';
+
+    try {
+      String response = await _callOpenAIAPI(continuePrompt);
+
+      // Only add the GPT response to the chat history if it's not empty
+      if (response.isNotEmpty) {
+        setState(() {
+          _chatHistory.add({
+            "user": "",
+            "response": response
+          }); // Only add GPT's response if it's valid
+          _isResponseIncomplete =
+              false; // Reset the flag after the response continues
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _chatHistory.add({
+          "user": "",
+          "response": 'Error occurred: $e'
+        }); // Only add error if needed
+      });
+    }
+  }
+
+  int _totalTokensUsed =
+      0; // Add a state variable to track the total tokens used.
+
   Future<String> _callOpenAIAPI(String query) async {
-    final url = Uri.parse(
-        "https://api.openai.com/v1/chat/completions"); // OpenAI endpoint
+    final url = Uri.parse("https://api.openai.com/v1/chat/completions");
+
+    // Construct the full conversation history to send to the API
+    List<Map<String, String>> messages = [];
+
+    // Add each previous chat history message to the request body
+    for (var chat in _chatHistory) {
+      messages.add({"role": "user", "content": chat["user"]!});
+      messages.add({"role": "assistant", "content": chat["response"]!});
+    }
+
+    // Add the new user query at the end
+    messages.add({"role": "user", "content": query});
 
     try {
       final response = await http.post(
         url,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $_apiKey", // Use the API key
+          "Authorization": "Bearer $_apiKey",
         },
         body: jsonEncode({
-          "model": _selectedModel == 'GPT-4'
-              ? "gpt-4"
-              : "gpt-3.5-turbo", // Use selected model
-          "messages": [
-            {
-              "role": "user",
-              "content": query
-            } // Send the query as a user message
-          ],
-          "max_tokens": 100, // Limit the response length
+          "model": _selectedModel == 'GPT-4' ? "gpt-4" : "gpt-3.5-turbo",
+          "messages": messages, // Send the entire conversation history
+          "max_tokens": 100, // Adjust as needed
         }),
       );
 
       if (response.statusCode == 200) {
         final decodedResponse = jsonDecode(response.body);
-        return decodedResponse['choices'][0]['message']['content']
-            .trim(); // Extract the response text from GPT-4
+
+        // Get token usage details
+        int tokensUsed = decodedResponse['usage']['total_tokens'];
+        setState(() {
+          _totalTokensUsed += tokensUsed; // Update total tokens used
+        });
+        setState(() {
+          _totalTokensUsed += tokensUsed;
+        });
+        _saveTokenUsage(); // Save updated token usage
+        return decodedResponse['choices'][0]['message']['content'].trim();
       } else {
-        // Log the error response details for debugging
-        print("Failed request: ${response.statusCode}");
-        print("Response body: ${response.body}");
         throw Exception("Failed to fetch response from OpenAI");
       }
     } catch (e) {
-      print("Error occurred: $e");
-      throw Exception("Failed to fetch response from OpenAI");
+      throw Exception("Failed to fetch response from OpenAI: $e");
     }
+  }
+
+  double _calculateCost() {
+    // Assume $0.06 per 1,000 tokens for GPT-4 and $0.002 per 1,000 tokens for GPT-3.5.
+    double costPerThousandTokens = _selectedModel == 'GPT-4' ? 0.06 : 0.002;
+    return (_totalTokensUsed / 1000) * costPerThousandTokens;
   }
 
   // Save the current chat session
@@ -149,6 +216,20 @@ class _AssistantScreenState extends State<AssistantScreen> {
     );
   }
 
+// Add this method in your class _AssistantScreenState
+  Future<void> _deleteAllChats() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _savedChats.clear(); // Clear saved chats in the state
+    });
+    await prefs
+        .remove('savedChats'); // Remove saved chats from SharedPreferences
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('All saved chats deleted!')),
+    );
+  }
+
   // Load a saved chat session
   void _loadChatSession(String savedChat) {
     List<dynamic> decodedChat = jsonDecode(savedChat);
@@ -167,6 +248,36 @@ class _AssistantScreenState extends State<AssistantScreen> {
     await prefs.setStringList('savedChats', _savedChats);
   }
 
+  Widget _buildUserMessage(String message, ThemeData theme, bool isDarkMode) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(child: Icon(Icons.person)), // User icon
+        SizedBox(width: 10), // Space between icon and message
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Colors.blueGrey[700]
+                  : Colors.blue[100], // Different color for user
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 16,
+                color: isDarkMode
+                    ? Colors.white
+                    : Colors.black, // Adjust text color for dark mode
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -178,12 +289,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.save),
-            onPressed: _saveChatSession, // Save the current chat session
+            onPressed: _saveChatSession,
           ),
           IconButton(
             icon: Icon(Icons.history),
             onPressed: () {
-              // Navigate to saved chats screen
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -191,8 +301,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     savedChats: _savedChats,
                     loadChat: _loadChatSession,
                     deleteChat: _deleteChatSession,
-                    deleteAllChats:
-                        _deleteAllChats, // Function to delete all chats
+                    deleteAllChats: _deleteAllChats,
                   ),
                 ),
               );
@@ -200,15 +309,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
           ),
           IconButton(
             icon: Icon(Icons.clear_all),
-            onPressed: _clearChat, // Clear the current chat
+            onPressed: _clearChat,
           ),
         ],
       ),
       drawer: AppNavigationDrawer(),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.end, // Align content to the left
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Dropdown for Model Selection anchored at the top
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: DropdownButton<String>(
@@ -228,11 +336,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
           ),
           Expanded(
             child: Scrollbar(
-              // Add Scrollbar
-              controller: _scrollController, // Use the same controller
+              controller: _scrollController,
               thumbVisibility: true,
               child: ListView.builder(
-                controller: _scrollController, // Attach ScrollController
+                controller: _scrollController,
                 padding: EdgeInsets.all(16),
                 itemCount: _chatHistory.length,
                 itemBuilder: (context, index) {
@@ -240,10 +347,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildUserMessage(chat['user']!, theme, isDarkMode),
+                      // Only render user message if it's not empty
+                      if (chat['user'] != null && chat['user']!.isNotEmpty)
+                        _buildUserMessage(chat['user']!, theme, isDarkMode),
                       SizedBox(height: 10),
-                      _buildChatGPTResponse(
-                          chat['response']!, theme, isDarkMode),
+                      // Only render GPT response if it's not empty
+                      if (chat['response'] != null &&
+                          chat['response']!.isNotEmpty)
+                        _buildChatGPTResponse(
+                            chat['response']!, theme, isDarkMode),
                       Divider(),
                     ],
                   );
@@ -251,6 +363,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
               ),
             ),
           ),
+
+          // Conditionally show the "Continue" button when the response is incomplete
+          if (_isResponseIncomplete)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: _continueResponse,
+                child: Text('Continue Response'),
+              ),
+            ),
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -258,8 +381,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 Expanded(
                   child: TextField(
                     controller: _queryController,
-                    minLines: 1, // Minimum height (1 line)
-                    maxLines: 5, // Maximum height (5 lines)
+                    minLines: 1,
+                    maxLines: 5,
                     decoration: InputDecoration(
                       hintText: 'Ask the assistant...',
                       border: OutlineInputBorder(),
@@ -276,46 +399,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // New function to delete all saved chats
-  Future<void> _deleteAllChats() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _savedChats.clear();
-    });
-    await prefs
-        .remove('savedChats'); // Remove all saved chats from SharedPreferences
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('All saved chats deleted!')),
-    );
-  }
-
-  Widget _buildUserMessage(String message, ThemeData theme, bool isDarkMode) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CircleAvatar(child: Icon(Icons.person)),
-        SizedBox(width: 10),
-        Expanded(
-          child: Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.blueGrey[700] : Colors.blue[100],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              message,
-              style: TextStyle(
-                fontSize: 16,
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 

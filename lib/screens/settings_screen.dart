@@ -5,6 +5,7 @@ import 'package:authors_toolbox/theme_provider.dart';
 import 'package:authors_toolbox/screens/about_screen.dart';
 import 'package:authors_toolbox/screens/custom_shortcuts_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Import secure storage package
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   @override
@@ -15,10 +16,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
   final _storage = FlutterSecureStorage(); // Secure storage instance
 
+  int _totalTokensUsed = 0;
+
   @override
   void initState() {
     super.initState();
-    _loadApiKey(); // Load API key from secure storage when the screen is initialized
+    _loadApiKey();
+    _loadTokenUsage();
   }
 
   // Load the OpenAI API key from secure storage
@@ -30,6 +34,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             apiKey; // Populate the input field if a key is found
       });
     }
+  }
+
+  // Load total tokens used from SharedPreferences
+  Future<void> _loadTokenUsage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _totalTokensUsed =
+          prefs.getInt('totalTokensUsed') ?? 0; // Load the token count
+    });
+  }
+
+  // Calculate the cost based on token usage
+  double _calculateCost() {
+    double costPerThousandTokens =
+        0.002; // Assuming GPT-3.5 cost here, change for other models if needed
+    return (_totalTokensUsed / 1000) * costPerThousandTokens;
   }
 
 // Save the OpenAI API key to secure storage
@@ -111,7 +131,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SizedBox(height: 20),
             Divider(),
-            // Button to navigate to the custom shortcuts management screen
+            // Add the token usage and cost details here
+            Text(
+              'OpenAI Usage:',
+              style: TextStyle(fontSize: 20),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Total Tokens Used: $_totalTokensUsed',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 5),
+            Text(
+              'Estimated Cost: \$${_calculateCost().toStringAsFixed(4)}',
+              style: TextStyle(fontSize: 16),
+            ),
+            Divider(),
             ListTile(
               title: Text('Manage Custom Shortcuts'),
               onTap: () {
@@ -124,7 +159,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             Divider(),
-            // About section
             ListTile(
               title: Text('About'),
               onTap: () {

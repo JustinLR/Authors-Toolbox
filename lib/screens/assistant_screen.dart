@@ -19,6 +19,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
   List<String> _savedChats = [];
   final _storage = FlutterSecureStorage(); // Secure storage instance
   String? _apiKey; // Variable to store the OpenAI API key
+  String _selectedModel = 'GPT-4o'; // Default to GPT-4
+  List<String> _models = ['GPT-4o', 'GPT-4', 'GPT-3.5']; // Model options
 
   @override
   void initState() {
@@ -70,9 +72,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
   }
 
+  // Call OpenAI API with selected model
   Future<String> _callOpenAIAPI(String query) async {
     final url = Uri.parse(
-        "https://api.openai.com/v1/chat/completions"); // Correct endpoint for chat completions
+        "https://api.openai.com/v1/chat/completions"); // OpenAI endpoint
 
     try {
       final response = await http.post(
@@ -82,7 +85,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
           "Authorization": "Bearer $_apiKey", // Use the API key
         },
         body: jsonEncode({
-          "model": "gpt-4", // Use the GPT-4 model
+          "model": _selectedModel == 'GPT-4'
+              ? "gpt-4"
+              : "gpt-3.5-turbo", // Use selected model
           "messages": [
             {
               "role": "user",
@@ -169,7 +174,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Writing Assistant (ChatGPT)'),
+        title: Text('Writing Assistant'),
         actions: [
           IconButton(
             icon: Icon(Icons.save),
@@ -201,7 +206,26 @@ class _AssistantScreenState extends State<AssistantScreen> {
       ),
       drawer: AppNavigationDrawer(),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.end, // Align content to the left
         children: [
+          // Dropdown for Model Selection anchored at the top
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: DropdownButton<String>(
+              value: _selectedModel,
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedModel = newValue!;
+                });
+              },
+              items: _models.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+          ),
           Expanded(
             child: Scrollbar(
               // Add Scrollbar

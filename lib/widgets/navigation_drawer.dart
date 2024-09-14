@@ -5,6 +5,7 @@ import 'package:authors_toolbox/screens/progress_tracker_screen.dart';
 import 'package:authors_toolbox/screens/thesaurus_screen.dart';
 import 'package:authors_toolbox/screens/story_builder_screen.dart';
 import 'package:authors_toolbox/screens/settings_screen.dart';
+import 'package:authors_toolbox/screens/assistant_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
@@ -125,6 +126,15 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => ProgressTrackerScreen()),
+              );
+            },
+          ),
+          ListTile(
+            title: Text('Assistant'),
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => AssistantScreen()),
               );
             },
           ),

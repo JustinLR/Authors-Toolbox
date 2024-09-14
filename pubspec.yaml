@@ -28,8 +28,8 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
   lint: ^2.0.0
-  flutter_secure_storage: ^7.0.1 # Check the latest version from pub.dev
-  http: ^0.13.3 # Ensure you're using the latest version of the http package
+  flutter_secure_storage: ^9.2.2 # Check the latest version from pub.dev
+  http: ^1.2.2 # Ensure you're using the latest version of the http package
 
 flutter:
   uses-material-design: true

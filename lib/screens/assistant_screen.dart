@@ -13,6 +13,8 @@ class AssistantScreen extends StatefulWidget {
 
 class _AssistantScreenState extends State<AssistantScreen> {
   final TextEditingController _queryController = TextEditingController();
+  final ScrollController _scrollController =
+      ScrollController(); // ScrollController added here
   List<Map<String, String>> _chatHistory = [];
   List<String> _savedChats = [];
   final _storage = FlutterSecureStorage(); // Secure storage instance
@@ -201,21 +203,28 @@ class _AssistantScreenState extends State<AssistantScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.all(16),
-              itemCount: _chatHistory.length,
-              itemBuilder: (context, index) {
-                final chat = _chatHistory[index];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildUserMessage(chat['user']!, theme, isDarkMode),
-                    SizedBox(height: 10),
-                    _buildChatGPTResponse(chat['response']!, theme, isDarkMode),
-                    Divider(),
-                  ],
-                );
-              },
+            child: Scrollbar(
+              // Add Scrollbar
+              controller: _scrollController, // Use the same controller
+              thumbVisibility: true,
+              child: ListView.builder(
+                controller: _scrollController, // Attach ScrollController
+                padding: EdgeInsets.all(16),
+                itemCount: _chatHistory.length,
+                itemBuilder: (context, index) {
+                  final chat = _chatHistory[index];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildUserMessage(chat['user']!, theme, isDarkMode),
+                      SizedBox(height: 10),
+                      _buildChatGPTResponse(
+                          chat['response']!, theme, isDarkMode),
+                      Divider(),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
           Padding(
@@ -225,6 +234,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 Expanded(
                   child: TextField(
                     controller: _queryController,
+                    minLines: 1, // Minimum height (1 line)
+                    maxLines: 5, // Maximum height (5 lines)
                     decoration: InputDecoration(
                       hintText: 'Ask the assistant...',
                       border: OutlineInputBorder(),

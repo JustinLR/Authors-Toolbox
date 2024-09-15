@@ -14,7 +14,8 @@
       "**/.metadata": true,
       "**/authors_toolbox.iml": true,
       "**/pubspec.lock": true,
-      "analysis_options.yaml/": true
+      "analysis_options.yaml/": true,
+      "build/" : true
     }
   }
   

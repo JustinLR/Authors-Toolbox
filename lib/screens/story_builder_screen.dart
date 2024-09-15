@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 // Import forms and widgets
 import 'package:authors_toolbox/forms/character_form.dart';
 import 'package:authors_toolbox/forms/location_form.dart';
-import 'package:authors_toolbox/widgets/saved_entities_list.dart';
 
 // Import the models
 import 'package:authors_toolbox/models/character.dart';
@@ -19,128 +17,73 @@ class StoryBuilderScreen extends StatefulWidget {
   _StoryBuilderScreenState createState() => _StoryBuilderScreenState();
 }
 
-class _StoryBuilderScreenState extends State<StoryBuilderScreen>
-    with SingleTickerProviderStateMixin {
-  TabController? _tabController;
+class _StoryBuilderScreenState extends State<StoryBuilderScreen> {
+  // GPT Input Controller
+  TextEditingController _gptController = TextEditingController();
+  bool _isLoading = false;
 
-  // Lists for saved data
-  List<Character> _savedCharacters = [];
-  List<Location> _savedLocations = [];
+  // State variables to manage the form visibility
+  bool _showCharacterForm = false;
+  bool _showLocationForm = false;
 
-  // For editing mode
-  Character? _editingCharacter;
-  Location? _editingLocation;
-  int? _editingIndex;
+  Character? _generatedCharacter;
+  Location? _generatedLocation;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _loadSavedData();
-  }
-
-  // Load saved characters and locations from SharedPreferences
-  Future<void> _loadSavedData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Load saved characters
-    final List<String>? savedCharactersJson = prefs.getStringList('characters');
-    if (savedCharactersJson != null) {
-      setState(() {
-        _savedCharacters = savedCharactersJson
-            .map((characterJson) =>
-                Character.fromJson(jsonDecode(characterJson)))
-            .toList();
+  // Simulate GPT request (mocked for now)
+  Future<String> _sendToGpt(String input, String type) async {
+    await Future.delayed(const Duration(seconds: 2)); // Simulate delay
+    if (type == 'character') {
+      return jsonEncode({
+        'type': 'character',
+        'name': 'Arden',
+        'age': 30,
+        'role': 'Warrior',
+        'backstory': 'A brave warrior with a tragic past.'
       });
-    }
-
-    // Load saved locations
-    final List<String>? savedLocationsJson = prefs.getStringList('locations');
-    if (savedLocationsJson != null) {
-      setState(() {
-        _savedLocations = savedLocationsJson
-            .map((locationJson) => Location.fromJson(jsonDecode(locationJson)))
-            .toList();
+    } else if (type == 'location') {
+      return jsonEncode({
+        'type': 'location',
+        'name': 'The Mystic Forest',
+        'description': 'A dense forest full of ancient secrets.',
       });
+    } else {
+      return jsonEncode({'type': 'unknown', 'message': 'Invalid request.'});
     }
   }
 
-  // Save both characters and locations to SharedPreferences
-  Future<void> _saveData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Save characters
-    final List<String> charactersJson = _savedCharacters
-        .map((character) => jsonEncode(character.toJson()))
-        .toList();
-    await prefs.setStringList('characters', charactersJson);
-
-    // Save locations
-    final List<String> locationsJson = _savedLocations
-        .map((location) => jsonEncode(location.toJson()))
-        .toList();
-    await prefs.setStringList('locations', locationsJson);
-  }
-
-  // Add a new character to the saved list
-  void _addCharacter(Character character) {
+  // Handle GPT input and display appropriate form
+  Future<void> _handleGptInput(String type) async {
     setState(() {
-      if (_editingCharacter != null && _editingIndex != null) {
-        _savedCharacters[_editingIndex!] = character; // Edit mode
-        _editingCharacter = null;
-        _editingIndex = null;
-      } else {
-        _savedCharacters.add(character);
-      }
+      _isLoading = true;
     });
-    _saveData();
-  }
 
-  // Add a new location to the saved list
-  void _addLocation(Location location) {
-    setState(() {
-      if (_editingLocation != null && _editingIndex != null) {
-        _savedLocations[_editingIndex!] = location; // Edit mode
-        _editingLocation = null;
-        _editingIndex = null;
-      } else {
-        _savedLocations.add(location);
-      }
-    });
-    _saveData();
-  }
+    String userInput = _gptController.text;
+    String gptResponse = await _sendToGpt(userInput, type);
+    Map<String, dynamic> parsedResponse = jsonDecode(gptResponse);
 
-  // Remove a character from the saved list
-  void _deleteCharacter(int index) {
-    setState(() {
-      _savedCharacters.removeAt(index);
-    });
-    _saveData();
-  }
+    if (parsedResponse['type'] == 'character') {
+      setState(() {
+        _generatedCharacter = Character(
+          name: parsedResponse['name'],
+          age: parsedResponse['age'],
+          role: parsedResponse['role'],
+        );
+        _showCharacterForm = true;
+        _showLocationForm = false;
+      });
+    } else if (parsedResponse['type'] == 'location') {
+      setState(() {
+        _generatedLocation = Location(
+          name: parsedResponse['name'],
+          description: parsedResponse['description'],
+        );
+        _showLocationForm = true;
+        _showCharacterForm = false;
+      });
+    }
 
-  // Remove a location from the saved list
-  void _deleteLocation(int index) {
     setState(() {
-      _savedLocations.removeAt(index);
-    });
-    _saveData();
-  }
-
-  // Edit an existing character
-  void _editCharacter(int index) {
-    setState(() {
-      _editingCharacter = _savedCharacters[index];
-      _editingIndex = index;
-      _tabController!.animateTo(0); // Switch to character tab
-    });
-  }
-
-  // Edit an existing location
-  void _editLocation(int index) {
-    setState(() {
-      _editingLocation = _savedLocations[index];
-      _editingIndex = index;
-      _tabController!.animateTo(1); // Switch to location tab
+      _isLoading = false;
     });
   }
 
@@ -148,57 +91,97 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // Conditionally show either the back button or the navigation drawer button
+        leading: (_showCharacterForm || _showLocationForm)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  // Go back to the initial input screen
+                  setState(() {
+                    _showCharacterForm = false;
+                    _showLocationForm = false;
+                  });
+                },
+              )
+            : Builder(
+                builder: (BuildContext context) {
+                  return IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () {
+                      Scaffold.of(context)
+                          .openDrawer(); // Open navigation drawer
+                    },
+                  );
+                },
+              ),
         title: const Text('Story Builder'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Character'),
-            Tab(text: 'Location'),
-          ],
-        ),
       ),
       drawer: const AppNavigationDrawer(),
-      body: Row(
+      body: Center(
+        child: _isLoading
+            ? const CircularProgressIndicator()
+            : _showCharacterForm
+                ? CharacterForm(
+                    onSave: (Character character) {
+                      // Handle character save logic here
+                    },
+                    editingCharacter: _generatedCharacter,
+                  )
+                : _showLocationForm
+                    ? LocationForm(
+                        onSave: (Location location) {
+                          // Handle location save logic here
+                        },
+                        editingLocation: _generatedLocation,
+                      )
+                    : _buildInitialView(), // Initial view for text input and buttons
+      ),
+    );
+  }
+
+  // The initial view with a text box and buttons
+  Widget _buildInitialView() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            flex: 3,
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                CharacterForm(
-                  onSave: _addCharacter,
-                  editingCharacter: _editingCharacter,
-                ),
-                LocationForm(
-                  onSave: _addLocation,
-                  editingLocation: _editingLocation,
-                ),
-              ],
+          const Text(
+            'What would you like help with?',
+            style: TextStyle(fontSize: 20),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _gptController,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Describe what you need help with...',
             ),
           ),
-          const VerticalDivider(),
-          Expanded(
-            flex: 2,
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                SavedEntitiesList<Character>(
-                  entities: _savedCharacters,
-                  onDelete: _deleteCharacter,
-                  onEdit: _editCharacter,
-                  getTitle: (character) => character.name,
-                  getSubtitle: (character) =>
-                      'Age: ${character.age}, Role: ${character.role}',
-                ),
-                SavedEntitiesList<Location>(
-                  entities: _savedLocations,
-                  onDelete: _deleteLocation,
-                  onEdit: _editLocation,
-                  getTitle: (location) => location.name,
-                  getSubtitle: (location) => location.description,
-                ),
-              ],
-            ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  _handleGptInput('character');
+                },
+                child: const Text('Character'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  _handleGptInput('location');
+                },
+                child: const Text('Location'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Handle "Other" option logic here if needed
+                },
+                child: const Text('Other'),
+              ),
+            ],
           ),
         ],
       ),

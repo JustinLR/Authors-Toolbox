@@ -7,7 +7,8 @@ class SavedEntitiesList<T> extends StatelessWidget {
   final String Function(T) getTitle;
   final String Function(T) getSubtitle;
 
-  SavedEntitiesList({
+  const SavedEntitiesList({
+    super.key,
     required this.entities,
     required this.onDelete,
     required this.onEdit, // Add this line
@@ -18,7 +19,7 @@ class SavedEntitiesList<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entities.isEmpty) {
-      return Center(
+      return const Center(
         child: Text('No saved items'),
       );
     }
@@ -34,11 +35,11 @@ class SavedEntitiesList<T> extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: Icon(Icons.edit), // Edit button
+                icon: const Icon(Icons.edit), // Edit button
                 onPressed: () => onEdit(index), // Trigger edit callback
               ),
               IconButton(
-                icon: Icon(Icons.delete),
+                icon: const Icon(Icons.delete),
                 onPressed: () => onDelete(index), // Trigger delete callback
               ),
             ],

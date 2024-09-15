@@ -7,6 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class AssistantScreen extends StatefulWidget {
+  const AssistantScreen({super.key});
+
   @override
   _AssistantScreenState createState() => _AssistantScreenState();
 }
@@ -17,10 +19,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
       ScrollController(); // ScrollController added here
   List<Map<String, String>> _chatHistory = [];
   List<String> _savedChats = [];
-  final _storage = FlutterSecureStorage(); // Secure storage instance
+  final _storage = const FlutterSecureStorage(); // Secure storage instance
   String? _apiKey; // Variable to store the OpenAI API key
   String _selectedModel = 'GPT-4o'; // Default to GPT-4
-  List<String> _models = ['GPT-4o', 'GPT-4', 'GPT-3.5']; // Model options
+  final List<String> _models = ['GPT-4o', 'GPT-4', 'GPT-3.5']; // Model options
 
   bool _isResponseIncomplete =
       false; // Add this line to track incomplete responses
@@ -38,12 +40,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
     if (apiKey != null) {
       setState(() {
         _apiKey = apiKey; // Set the API key in state
-      });
-    }
-    Future<void> _loadTokenUsage() async {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      setState(() {
-        _totalTokensUsed = prefs.getInt('totalTokensUsed') ?? 0;
       });
     }
   }
@@ -65,7 +61,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
       if (_apiKey == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
               content: Text('No API Key found. Please set it in Settings.')),
         );
         return;
@@ -175,12 +171,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
   }
 
-  double _calculateCost() {
-    // Assume $0.06 per 1,000 tokens for GPT-4 and $0.002 per 1,000 tokens for GPT-3.5.
-    double costPerThousandTokens = _selectedModel == 'GPT-4' ? 0.06 : 0.002;
-    return (_totalTokensUsed / 1000) * costPerThousandTokens;
-  }
-
   // Save the current chat session
   Future<void> _saveChatSession() async {
     if (_chatHistory.isNotEmpty) {
@@ -192,7 +182,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
       await prefs.setStringList('savedChats', _savedChats);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Chat session saved!')),
+        const SnackBar(content: Text('Chat session saved!')),
       );
     }
   }
@@ -212,7 +202,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Current chat cleared!')),
+      const SnackBar(content: Text('Current chat cleared!')),
     );
   }
 
@@ -226,7 +216,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         .remove('savedChats'); // Remove saved chats from SharedPreferences
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('All saved chats deleted!')),
+      const SnackBar(content: Text('All saved chats deleted!')),
     );
   }
 
@@ -252,11 +242,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(child: Icon(Icons.person)), // User icon
-        SizedBox(width: 10), // Space between icon and message
+        const CircleAvatar(child: Icon(Icons.person)), // User icon
+        const SizedBox(width: 10), // Space between icon and message
         Expanded(
           child: Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isDarkMode
                   ? Colors.blueGrey[700]
@@ -285,14 +275,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Writing Assistant'),
+        title: const Text('Writing Assistant'),
         actions: [
           IconButton(
-            icon: Icon(Icons.save),
+            icon: const Icon(Icons.save),
             onPressed: _saveChatSession,
           ),
           IconButton(
-            icon: Icon(Icons.history),
+            icon: const Icon(Icons.history),
             onPressed: () {
               Navigator.push(
                 context,
@@ -308,12 +298,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.clear_all),
+            icon: const Icon(Icons.clear_all),
             onPressed: _clearChat,
           ),
         ],
       ),
-      drawer: AppNavigationDrawer(),
+      drawer: const AppNavigationDrawer(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -340,7 +330,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
               thumbVisibility: true,
               child: ListView.builder(
                 controller: _scrollController,
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 itemCount: _chatHistory.length,
                 itemBuilder: (context, index) {
                   final chat = _chatHistory[index];
@@ -350,13 +340,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
                       // Only render user message if it's not empty
                       if (chat['user'] != null && chat['user']!.isNotEmpty)
                         _buildUserMessage(chat['user']!, theme, isDarkMode),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       // Only render GPT response if it's not empty
                       if (chat['response'] != null &&
                           chat['response']!.isNotEmpty)
                         _buildChatGPTResponse(
                             chat['response']!, theme, isDarkMode),
-                      Divider(),
+                      const Divider(),
                     ],
                   );
                 },
@@ -370,7 +360,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
                 onPressed: _continueResponse,
-                child: Text('Continue Response'),
+                child: const Text('Continue Response'),
               ),
             ),
 
@@ -383,16 +373,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     controller: _queryController,
                     minLines: 1,
                     maxLines: 5,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: 'Ask the assistant...',
                       border: OutlineInputBorder(),
                     ),
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: _sendQuery,
-                  child: Text('Send'),
+                  child: const Text('Send'),
                 ),
               ],
             ),
@@ -407,11 +397,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(child: Icon(Icons.smart_toy)),
-        SizedBox(width: 10),
+        const CircleAvatar(child: Icon(Icons.smart_toy)),
+        const SizedBox(width: 10),
         Expanded(
           child: Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isDarkMode ? Colors.green[700] : Colors.green[100],
               borderRadius: BorderRadius.circular(8),

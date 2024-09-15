@@ -7,7 +7,8 @@ class SavedChatsScreen extends StatelessWidget {
   final Function deleteAllChats;
 
   // Constructor for SavedChatsScreen with required parameters
-  SavedChatsScreen({
+  const SavedChatsScreen({
+    super.key,
     required this.savedChats,
     required this.loadChat,
     required this.deleteChat,
@@ -18,13 +19,13 @@ class SavedChatsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Saved Chats'),
+        title: const Text('Saved Chats'),
       ),
       body: Column(
         children: [
           Expanded(
             child: savedChats.isEmpty
-                ? Center(child: Text('No saved chats available.'))
+                ? const Center(child: Text('No saved chats available.'))
                 : ListView.builder(
                     itemCount: savedChats.length,
                     itemBuilder: (context, index) {
@@ -34,7 +35,7 @@ class SavedChatsScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: Icon(Icons.restore),
+                              icon: const Icon(Icons.restore),
                               onPressed: () {
                                 loadChat(savedChats[index]);
                                 Navigator.pop(
@@ -42,7 +43,7 @@ class SavedChatsScreen extends StatelessWidget {
                               },
                             ),
                             IconButton(
-                              icon: Icon(Icons.delete),
+                              icon: const Icon(Icons.delete),
                               onPressed: () {
                                 deleteChat(index); // Delete individual chat
                               },
@@ -59,7 +60,8 @@ class SavedChatsScreen extends StatelessWidget {
             child: Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
                   backgroundColor:
                       Colors.red, // Set the button color to red for prominence
                   shape: RoundedRectangleBorder(
@@ -72,18 +74,17 @@ class SavedChatsScreen extends StatelessWidget {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: Text('Delete All Chats'),
-                        content: Text(
+                        title: const Text('Delete All Chats'),
+                        content: const Text(
                             'Are you sure you want to delete all saved chats?'),
                         actions: [
                           TextButton(
-                            child: Text('Cancel'),
+                            child: const Text('Cancel'),
                             onPressed: () {
                               Navigator.of(context).pop(); // Close the dialog
                             },
                           ),
                           ElevatedButton(
-                            child: Text('Delete All'),
                             onPressed: () {
                               deleteAllChats(); // Delete all saved chats
                               Navigator.of(context).pop(); // Close the dialog
@@ -94,13 +95,14 @@ class SavedChatsScreen extends StatelessWidget {
                               backgroundColor:
                                   Colors.red, // Confirm deletion in red
                             ),
+                            child: const Text('Delete All'),
                           ),
                         ],
                       );
                     },
                   );
                 },
-                child: Text(
+                child: const Text(
                   'Delete All Chats',
                   style: TextStyle(
                     fontSize: 18,

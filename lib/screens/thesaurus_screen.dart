@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
 import 'package:http/http.dart' as http;
@@ -120,25 +121,25 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Thesaurus'),
+        title: const Text('Thesaurus'),
       ),
-      drawer: AppNavigationDrawer(),
+      drawer: const AppNavigationDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Enter a word to find its details:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             /////////////////////////////
             // Text input for word search //
             /////////////////////////////
             TextField(
               controller: _controller,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Search word',
                 border: OutlineInputBorder(),
               ),
@@ -146,7 +147,7 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
                 _searchWordDetails(value);
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             /////////////////////////
             // Search button //
             /////////////////////////
@@ -154,16 +155,16 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
               onPressed: () {
                 _searchWordDetails(_controller.text);
               },
-              child: Text('Search'),
+              child: const Text('Search'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             if (_loading)
-              Center(child: CircularProgressIndicator())
+              const Center(child: CircularProgressIndicator())
             else if (_errorMessage.isNotEmpty)
               Center(
                 child: Text(
                   _errorMessage,
-                  style: TextStyle(color: Colors.red, fontSize: 16),
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
               )
@@ -171,16 +172,16 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
               /////////////////////////////
               // Definition Section //
               /////////////////////////////
-              Text(
+              const Text(
                 'Definition:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               SelectableText(
                 _definition,
-                style: TextStyle(fontSize: 14),
+                style: const TextStyle(fontSize: 14),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               /////////////////////////////
               // Synonyms and Antonyms side by side //
               /////////////////////////////
@@ -192,17 +193,17 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
                         border: Border.all(color: Colors.grey, width: 1.0),
                         borderRadius: BorderRadius.circular(5),
                       ),
-                      padding: EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Synonyms:',
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(height: 10),
-                          Container(
+                          const SizedBox(height: 10),
+                          SizedBox(
                             height: 150,
                             child: _synonyms.isNotEmpty
                                 ? ListView.builder(
@@ -213,30 +214,31 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
                                               SelectableText(_synonyms[index]));
                                     },
                                   )
-                                : Center(child: Text('No synonyms found')),
+                                : const Center(
+                                    child: Text('No synonyms found')),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  SizedBox(width: 20),
+                  const SizedBox(width: 20),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey, width: 1.0),
                         borderRadius: BorderRadius.circular(5),
                       ),
-                      padding: EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Antonyms:',
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(height: 10),
-                          Container(
+                          const SizedBox(height: 10),
+                          SizedBox(
                             height: 150,
                             child: _antonyms.isNotEmpty
                                 ? ListView.builder(
@@ -247,7 +249,8 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
                                               SelectableText(_antonyms[index]));
                                     },
                                   )
-                                : Center(child: Text('No antonyms found')),
+                                : const Center(
+                                    child: Text('No antonyms found')),
                           ),
                         ],
                       ),
@@ -255,15 +258,15 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ///////////////////////////////
               // Related Wikipedia results //
               ///////////////////////////////
-              Text(
+              const Text(
                 'Related Wikipedia Results:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Expanded(
                 child: _wikiResults.isNotEmpty
                     ? ListView.builder(
@@ -278,7 +281,8 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
                           );
                         },
                       )
-                    : Center(child: Text('No related Wikipedia results found')),
+                    : const Center(
+                        child: Text('No related Wikipedia results found')),
               ),
             ],
           ],
@@ -291,10 +295,12 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
   // Function to launch a URL //
   /////////////////////////
   Future<void> _launchURL(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
     } else {
-      print('Could not launch $url');
+      if (kDebugMode) {
+        print('Could not launch $url');
+      }
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:authors_toolbox/models/book.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
@@ -10,6 +11,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 
 class BookHubScreen extends StatefulWidget {
+  const BookHubScreen({super.key});
+
   @override
   _BookHubScreenState createState() => _BookHubScreenState();
 }
@@ -47,9 +50,15 @@ class _BookHubScreenState extends State<BookHubScreen> {
   ////////////////////////////////////
   @override
   void dispose() {
-    _titleControllers.forEach((controller) => controller.dispose());
-    _fileControllers.forEach((controller) => controller.dispose());
-    _urlControllers.forEach((controller) => controller.dispose());
+    for (var controller in _titleControllers) {
+      controller.dispose();
+    }
+    for (var controller in _fileControllers) {
+      controller.dispose();
+    }
+    for (var controller in _urlControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -59,11 +68,11 @@ class _BookHubScreenState extends State<BookHubScreen> {
   void _removeSeriesFromEdit(Book book) {
     if (book.series != 'None' && seriesList.contains(book.series)) {
       setState(() {
-        books.forEach((b) {
+        for (var b in books) {
           if (b.series == book.series) {
             b.series = 'None'; // Reset the series for any books in this group
           }
-        });
+        }
 
         // Remove the series from the list
         seriesList.remove(book.series);
@@ -123,15 +132,15 @@ class _BookHubScreenState extends State<BookHubScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Book Hub'),
+            const Text('Book Hub'),
             Row(
               children: [
                 ElevatedButton.icon(
                   onPressed: _importBooks, // Import books function
-                  icon: Icon(Icons.import_export),
-                  label: Text('Import'),
+                  icon: const Icon(Icons.import_export),
+                  label: const Text('Import'),
                 ),
-                SizedBox(width: 20),
+                const SizedBox(width: 20),
                 /////////////////////////////
                 /////Series/Groups Dropdown//
                 /////////////////////////////
@@ -163,20 +172,20 @@ class _BookHubScreenState extends State<BookHubScreen> {
                         });
                       },
                     ),
-                    SizedBox(width: 5),
+                    const SizedBox(width: 5),
                     IconButton(
-                      icon: Icon(Icons.add),
+                      icon: const Icon(Icons.add),
                       onPressed: _addSeries, // Add a new series
                     ),
                     IconButton(
-                      icon: Icon(Icons.remove),
+                      icon: const Icon(Icons.remove),
                       onPressed: _removeSeries, // Remove selected series
                     ),
                   ],
                 ),
-                SizedBox(width: 20),
-                Text('Card Size:'),
-                Container(
+                const SizedBox(width: 20),
+                const Text('Card Size:'),
+                SizedBox(
                   width: 150, // Limit the slider width
                   child: Slider(
                     value: _itemWidth,
@@ -194,7 +203,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
           ],
         ),
       ),
-      drawer: AppNavigationDrawer(),
+      drawer: const AppNavigationDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: LayoutBuilder(
@@ -246,13 +255,13 @@ class _BookHubScreenState extends State<BookHubScreen> {
               color: Colors.black.withOpacity(0.5),
               blurRadius: 12,
               spreadRadius: 3,
-              offset: Offset(6, 6),
+              offset: const Offset(6, 6),
             ),
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
               blurRadius: 12,
               spreadRadius: 2,
-              offset: Offset(-6, -6),
+              offset: const Offset(-6, -6),
             ),
           ],
         ),
@@ -269,7 +278,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     image: DecorationImage(
                       image: book.imageUrl.isNotEmpty
                           ? FileImage(File(book.imageUrl)) as ImageProvider
-                          : AssetImage('assets/placeholder.png'),
+                          : const AssetImage('assets/placeholder.png'),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -283,10 +292,11 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 left: 0,
                 right: 0,
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 4.0),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(6),
                       bottomRight: Radius.circular(6),
                     ),
@@ -295,7 +305,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     book.series != 'None'
                         ? book.series
                         : '', // Show series name if available
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -342,7 +352,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     ],
                   ),
                   child: PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert, color: Colors.white),
+                    icon: const Icon(Icons.more_vert, color: Colors.white),
                     onSelected: (String result) {
                       if (result == 'edit') {
                         _showEditDialog(index);
@@ -355,10 +365,11 @@ class _BookHubScreenState extends State<BookHubScreen> {
                       }
                     },
                     itemBuilder: (BuildContext context) => [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                      PopupMenuItem(value: 'file', child: Text('Open')),
-                      PopupMenuItem(value: 'url', child: Text('URL')),
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      const PopupMenuItem(
+                          value: 'delete', child: Text('Delete')),
+                      const PopupMenuItem(value: 'file', child: Text('Open')),
+                      const PopupMenuItem(value: 'url', child: Text('URL')),
                     ],
                   ),
                 ),
@@ -373,8 +384,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 child: Align(
                   alignment: Alignment.center,
                   child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(6),
@@ -383,7 +394,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                       children: [
                         Text(
                           book.title.isNotEmpty ? book.title : 'Untitled',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -419,11 +430,11 @@ class _BookHubScreenState extends State<BookHubScreen> {
               color: Colors.black.withOpacity(0.5),
               blurRadius: 12,
               spreadRadius: 2,
-              offset: Offset(6, 6),
+              offset: const Offset(6, 6),
             ),
           ],
         ),
-        child: Center(
+        child: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -471,7 +482,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: Text('Edit Book Details'),
+          title: const Text('Edit Book Details'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -479,9 +490,9 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 // Title input field
                 TextField(
                   controller: _titleControllers[index],
-                  decoration: InputDecoration(labelText: 'Title'),
+                  decoration: const InputDecoration(labelText: 'Title'),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 ////////////////////////////////
                 // Image picker for book cover//
                 ////////////////////////////////
@@ -490,11 +501,12 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     Expanded(
                       child: TextField(
                         controller: imageController,
-                        decoration: InputDecoration(labelText: 'Image URL'),
+                        decoration:
+                            const InputDecoration(labelText: 'Image URL'),
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.folder_open),
+                      icon: const Icon(Icons.folder_open),
                       onPressed: () async {
                         final pickedFile = await ImagePicker()
                             .pickImage(source: ImageSource.gallery);
@@ -507,7 +519,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 //////////////////////////////
                 // File picker for file path//
                 //////////////////////////////
@@ -516,11 +528,12 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     Expanded(
                       child: TextField(
                         controller: _fileControllers[index],
-                        decoration: InputDecoration(labelText: 'File Path'),
+                        decoration:
+                            const InputDecoration(labelText: 'File Path'),
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.folder_open),
+                      icon: const Icon(Icons.folder_open),
                       onPressed: () async {
                         final pickedFile = await _pickFile();
                         if (pickedFile != null) {
@@ -532,15 +545,15 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 ////////////////////
                 // URL input field//
                 ////////////////////
                 TextField(
                   controller: _urlControllers[index],
-                  decoration: InputDecoration(labelText: 'URL'),
+                  decoration: const InputDecoration(labelText: 'URL'),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 /////////////////////////////////////////////
                 // Dropdown for selecting the book's series//
                 /////////////////////////////////////////////
@@ -571,15 +584,15 @@ class _BookHubScreenState extends State<BookHubScreen> {
                         },
                       ),
                     ),
-                    SizedBox(width: 5),
+                    const SizedBox(width: 5),
                     // Add Series Button
                     IconButton(
-                      icon: Icon(Icons.add),
+                      icon: const Icon(Icons.add),
                       onPressed: _addSeries, // Add a new series
                     ),
                     // Remove Series Button
                     IconButton(
-                      icon: Icon(Icons.remove),
+                      icon: const Icon(Icons.remove),
                       onPressed: () => _removeSeriesFromEdit(books[index]),
                     ),
                   ],
@@ -593,7 +606,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 Navigator.of(dialogContext)
                     .pop(); // Close the dialog without saving
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -606,7 +619,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 });
                 Navigator.of(dialogContext).pop(); // Close the dialog
               },
-              child: Text('Save'),
+              child: const Text('Save'),
             ),
           ],
         );
@@ -659,10 +672,12 @@ class _BookHubScreenState extends State<BookHubScreen> {
   /////Helper Method: Launch URL///////
   /////////////////////////////////////
   void _launchUrl(String url) async {
-    if (url.isNotEmpty && await canLaunch(url)) {
-      await launch(url);
+    if (url.isNotEmpty && await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
     } else {
-      print("Invalid or empty URL");
+      if (kDebugMode) {
+        print("Invalid or empty URL");
+      }
     }
   }
 
@@ -720,9 +735,13 @@ class _BookHubScreenState extends State<BookHubScreen> {
       setState(() {
         seriesList = loadedSeriesList.cast<String>()..insert(0, "Show All");
       });
-      print('Series list loaded: $seriesList'); // Debugging log
+      if (kDebugMode) {
+        print('Series list loaded: $seriesList');
+      } // Debugging log
     } else {
-      print('Series file does not exist.'); // Debugging log
+      if (kDebugMode) {
+        print('Series file does not exist.');
+      } // Debugging log
     }
   }
 
@@ -798,10 +817,10 @@ class _BookHubScreenState extends State<BookHubScreen> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: Text('Add New Series'),
+          title: const Text('Add New Series'),
           content: TextField(
             controller: seriesNameController,
-            decoration: InputDecoration(labelText: 'Series Name'),
+            decoration: const InputDecoration(labelText: 'Series Name'),
           ),
           actions: [
             TextButton(
@@ -809,7 +828,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 Navigator.of(dialogContext)
                     .pop(); // Close dialog without action
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -827,7 +846,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
 
                 Navigator.of(dialogContext).pop(); // Close dialog after adding
               },
-              child: Text('Add'),
+              child: const Text('Add'),
             ),
           ],
         );
@@ -841,11 +860,11 @@ class _BookHubScreenState extends State<BookHubScreen> {
   void _removeSeries() {
     if (selectedSeries != "Show All") {
       setState(() {
-        books.forEach((book) {
+        for (var book in books) {
           if (book.series == selectedSeries) {
             book.series = 'None'; // Reset the series of books in this group
           }
-        });
+        }
         seriesList.remove(selectedSeries);
         selectedSeries = 'Show All'; // Ensure selectedSeries is valid
         _saveBooksToFile(); // Save changes to books

@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
 
 class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Authors Toolbox Home'),
+        title: const Text('Authors Toolbox Home'),
       ),
-      drawer: AppNavigationDrawer(), // Include the navigation drawer
+      drawer: const AppNavigationDrawer(), // Include the navigation drawer
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -19,19 +21,19 @@ class HomePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Welcome back!',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 10),
-                  Text(
+                  const SizedBox(height: 10),
+                  const Text(
                     'What would you like to do today?',
                     style: TextStyle(fontSize: 16),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   // Quick Navigation Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -59,31 +61,31 @@ class HomePage extends StatelessWidget {
                 ],
               ),
             ),
-            Divider(),
+            const Divider(),
             // Recent Activity
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Recent Activity',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   _recentActivity('Reviewed: The Great Novel - Chapter 3'),
                   _recentActivity('Updated: Progress Tracker - 75% complete'),
                   _recentActivity('Checked: Synonyms for "inspiration"'),
                 ],
               ),
             ),
-            Divider(),
+            const Divider(),
             // Featured Tools or Tips
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -119,7 +121,7 @@ class HomePage extends StatelessWidget {
       icon: Icon(icon, size: 28),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
       ),
     );
   }
@@ -129,8 +131,8 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline, color: Colors.green),
-          SizedBox(width: 10),
+          const Icon(Icons.check_circle_outline, color: Colors.green),
+          const SizedBox(width: 10),
           Expanded(child: Text(activity)),
         ],
       ),

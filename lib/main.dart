@@ -18,7 +18,7 @@ void main() async {
   await windowManager.ensureInitialized();
 
   // Set the window title for Windows
-  WindowOptions windowOptions = WindowOptions(
+  WindowOptions windowOptions = const WindowOptions(
     title: 'Authors Toolbox', // Set the desired window title here
   );
   windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -29,12 +29,14 @@ void main() async {
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -46,15 +48,15 @@ class MyApp extends StatelessWidget {
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       initialRoute: '/', // Initial route points to HomePage
       routes: {
-        '/': (context) => HomePage(), // HomePage route
-        '/book_hub': (context) => BookHubScreen(), // Book Hub route
+        '/': (context) => const HomePage(), // HomePage route
+        '/book_hub': (context) => const BookHubScreen(), // Book Hub route
         '/progress_tracker': (context) =>
-            ProgressTrackerScreen(), // Progress Tracker route
-        '/assistant': (context) => AssistantScreen(), // Assistant route
+            const ProgressTrackerScreen(), // Progress Tracker route
+        '/assistant': (context) => const AssistantScreen(), // Assistant route
         '/thesaurus': (context) => ThesaurusScreen(), // Thesaurus route
         '/story_builder': (context) =>
-            StoryBuilderScreen(), // Story Builder route
-        '/settings': (context) => SettingsScreen(), // Settings route
+            const StoryBuilderScreen(), // Story Builder route
+        '/settings': (context) => const SettingsScreen(), // Settings route
       },
     );
   }

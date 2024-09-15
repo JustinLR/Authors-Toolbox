@@ -3,15 +3,17 @@ import 'dart:io'; // For using File
 import 'package:image_picker/image_picker.dart'; // For picking images
 
 class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
   // Controllers for text fields
-  TextEditingController _nameController = TextEditingController();
-  TextEditingController _usernameController = TextEditingController();
-  TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   // Variable for storing the profile picture path
   File? _profilePicture;
@@ -23,7 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('User Profile'),
+        title: const Text('User Profile'),
         actions: [],
       ),
       body: SingleChildScrollView(
@@ -43,21 +45,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _profilePicture!) // Display the selected image
                         : null, // No image (will leave it blank)
                     child: _profilePicture == null
-                        ? Icon(Icons.person,
+                        ? const Icon(Icons.person,
                             size:
                                 50) // Show an icon if no profile picture is selected
                         : null, // If profile picture is selected, don't show the icon
                   ),
                 ),
-                SizedBox(height: 16),
-                Text('Tap to change profile picture',
+                const SizedBox(height: 16),
+                const Text('Tap to change profile picture',
                     style: TextStyle(color: Colors.grey)),
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
 
                 // Name Field
                 TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Name',
                     border: OutlineInputBorder(),
                   ),
@@ -68,12 +70,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Username Field
                 TextFormField(
                   controller: _usernameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Username',
                     border: OutlineInputBorder(),
                   ),
@@ -84,13 +86,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Password',
                     border: OutlineInputBorder(),
                   ),
@@ -103,12 +105,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
 
                 // Save Button
                 ElevatedButton(
                   onPressed: _saveProfile,
-                  child: Text('Save Profile'),
+                  child: const Text('Save Profile'),
                 ),
               ],
             ),
@@ -122,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _saveProfile() {
     if (_formKey.currentState!.validate()) {
       // You can replace this with actual logic to save the profile information
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Profile Saved!'),
       ));
     }
@@ -130,8 +132,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Function to change profile picture using image_picker
   Future<void> _changeProfilePicture() async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
       setState(() {

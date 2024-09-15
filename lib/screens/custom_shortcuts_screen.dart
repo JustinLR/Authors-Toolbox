@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 class CustomShortcutsScreen extends StatefulWidget {
+  const CustomShortcutsScreen({super.key});
+
   @override
   _CustomShortcutsScreenState createState() => _CustomShortcutsScreenState();
 }
@@ -56,8 +58,8 @@ class _CustomShortcutsScreenState extends State<CustomShortcutsScreen> {
   Future<void> _openShortcut(String shortcut) async {
     if (shortcut.startsWith('http')) {
       // If it's a URL, use url_launcher to open it
-      if (await canLaunch(shortcut)) {
-        await launch(shortcut);
+      if (await canLaunchUrl(Uri.parse(shortcut))) {
+        await launchUrl(Uri.parse(shortcut));
       } else {
         throw 'Could not launch $shortcut';
       }
@@ -82,7 +84,7 @@ class _CustomShortcutsScreenState extends State<CustomShortcutsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manage Shortcuts'),
+        title: const Text('Manage Shortcuts'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -91,21 +93,21 @@ class _CustomShortcutsScreenState extends State<CustomShortcutsScreen> {
           children: [
             TextField(
               controller: _shortcutController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Enter new shortcut (URL or File Path)',
                 hintText: 'Shortcut URL or file path',
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
                 _addShortcut(_shortcutController.text);
               },
-              child: Text('Add Shortcut'),
+              child: const Text('Add Shortcut'),
             ),
-            SizedBox(height: 20),
-            Divider(),
-            Text(
+            const SizedBox(height: 20),
+            const Divider(),
+            const Text(
               'Manage Shortcuts:',
               style: TextStyle(fontSize: 20),
             ),
@@ -116,7 +118,7 @@ class _CustomShortcutsScreenState extends State<CustomShortcutsScreen> {
                   return ListTile(
                     title: Text(customShortcuts[index]),
                     trailing: IconButton(
-                      icon: Icon(Icons.delete),
+                      icon: const Icon(Icons.delete),
                       onPressed: () {
                         _removeShortcut(index);
                       },

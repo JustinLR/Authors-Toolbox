@@ -121,6 +121,8 @@ class TimeInputFormatter extends TextInputFormatter {
 // Stopwatch Widget to handle the timer and alarm functionality
 ///////////////
 class StopwatchWidget extends StatefulWidget {
+  const StopwatchWidget({super.key});
+
   @override
   _StopwatchWidgetState createState() => _StopwatchWidgetState();
 }
@@ -161,7 +163,7 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
     }
 
     if (!_isRunning) {
-      _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         setState(() {
           _seconds++;
 
@@ -221,11 +223,11 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text("Alarm"),
-          content: Text("Time's up!"),
+          title: const Text("Alarm"),
+          content: const Text("Time's up!"),
           actions: [
             TextButton(
-              child: Text("OK"),
+              child: const Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -250,36 +252,37 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
           percent: progress.clamp(0.0, 1.0),
           center: Text(
             _formatTime(_seconds),
-            style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
           ),
           progressColor: _progressColor,
           backgroundColor: Colors.grey.shade300,
           circularStrokeCap: CircularStrokeCap.round,
         ),
-        SizedBox(width: 20),
+        const SizedBox(width: 20),
         Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ElevatedButton(
               onPressed: _isRunning ? null : _startStopwatch,
-              child: Text("Start"),
+              child: const Text("Start"),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _isRunning ? _stopStopwatch : null,
-              child: Text("Stop"),
+              child: const Text("Stop"),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _resetStopwatch,
-              child: Text("Reset"),
+              child: const Text("Reset"),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             SizedBox(
               width: 150,
               child: TextField(
                 controller: _alarmController,
-                decoration: InputDecoration(labelText: 'Set Alarm (HH:MM:SS)'),
+                decoration:
+                    const InputDecoration(labelText: 'Set Alarm (HH:MM:SS)'),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   TimeInputFormatter(), // Apply custom formatter to lock colons and allow numeric input
@@ -297,6 +300,8 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
 // Progress Tracker Screen for managing projects and progress
 ///////////////
 class ProgressTrackerScreen extends StatefulWidget {
+  const ProgressTrackerScreen({super.key});
+
   @override
   _ProgressTrackerScreenState createState() => _ProgressTrackerScreenState();
 }
@@ -337,7 +342,7 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
         _descriptionController.text.isEmpty ||
         _wordCountGoalController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill out all fields')),
+        const SnackBar(content: Text('Please fill out all fields')),
       );
       return;
     }
@@ -345,7 +350,7 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
     final wordCountGoal = int.tryParse(_wordCountGoalController.text);
     if (wordCountGoal == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Word count goal must be a number')),
+        const SnackBar(content: Text('Word count goal must be a number')),
       );
       return;
     }
@@ -374,28 +379,28 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Edit Project"),
+          title: const Text("Edit Project"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Project Name'),
+                decoration: const InputDecoration(labelText: 'Project Name'),
               ),
               TextField(
                 controller: _descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
+                decoration: const InputDecoration(labelText: 'Description'),
               ),
               TextField(
                 controller: _wordCountGoalController,
-                decoration: InputDecoration(labelText: 'Word Count Goal'),
+                decoration: const InputDecoration(labelText: 'Word Count Goal'),
                 keyboardType: TextInputType.number,
               ),
             ],
           ),
           actions: [
             ElevatedButton(
-              child: Text("Save"),
+              child: const Text("Save"),
               onPressed: () {
                 final wordCountGoal =
                     int.tryParse(_wordCountGoalController.text);
@@ -409,7 +414,8 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
                   Navigator.of(context).pop();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Word count goal must be a number')),
+                    const SnackBar(
+                        content: Text('Word count goal must be a number')),
                   );
                 }
               },
@@ -438,26 +444,27 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
   }
 
   void _showAddWordCountDialog(int index) {
-    final _wordCountController = TextEditingController();
+    final wordCountController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Add Word Count"),
+          title: const Text("Add Word Count"),
           content: TextField(
-            controller: _wordCountController,
-            decoration: InputDecoration(labelText: 'Words Written'),
+            controller: wordCountController,
+            decoration: const InputDecoration(labelText: 'Words Written'),
             keyboardType: TextInputType.number,
           ),
           actions: [
             ElevatedButton(
-              child: Text("Add"),
+              child: const Text("Add"),
               onPressed: () {
-                final wordCount = int.tryParse(_wordCountController.text);
+                final wordCount = int.tryParse(wordCountController.text);
                 if (wordCount == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please enter a valid word count')),
+                    const SnackBar(
+                        content: Text('Please enter a valid word count')),
                   );
                 } else {
                   _addWordCount(index, wordCount);
@@ -473,7 +480,7 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
 
   double _calculateWeeklyAverage() {
     DateTime now = DateTime.now();
-    DateTime oneWeekAgo = now.subtract(Duration(days: 7));
+    DateTime oneWeekAgo = now.subtract(const Duration(days: 7));
     int totalWords = 0;
     int entryCount = 0;
 
@@ -535,9 +542,9 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Progress Tracker'),
+        title: const Text('Progress Tracker'),
       ),
-      drawer: AppNavigationDrawer(),
+      drawer: const AppNavigationDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -553,44 +560,46 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
                     children: [
                       TextField(
                         controller: _nameController,
-                        decoration: InputDecoration(labelText: 'Project Name'),
+                        decoration:
+                            const InputDecoration(labelText: 'Project Name'),
                       ),
                       TextField(
                         controller: _descriptionController,
-                        decoration: InputDecoration(labelText: 'Description'),
+                        decoration:
+                            const InputDecoration(labelText: 'Description'),
                       ),
                       TextField(
                         controller: _wordCountGoalController,
                         decoration:
-                            InputDecoration(labelText: 'Word Count Goal'),
+                            const InputDecoration(labelText: 'Word Count Goal'),
                         keyboardType: TextInputType.number,
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       ElevatedButton(
                         onPressed: _addProject,
-                        child: Text('Add Project'),
+                        child: const Text('Add Project'),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(width: 20),
-                Expanded(
+                const SizedBox(width: 20),
+                const Expanded(
                   flex: 1,
                   child: StopwatchWidget(),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               'Weekly Average Word Count: ${weeklyAverage.toStringAsFixed(1)}',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               'Monthly Average Word Count: ${monthlyAverage.toStringAsFixed(1)}',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
                 itemCount: _projects.length,
@@ -615,7 +624,7 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
                             percent: progress.clamp(0.0, 1.0),
                             center: Text(
                               "${(progress * 100).toStringAsFixed(1)}%",
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 18.0),
                             ),
                             progressColor: progress >= 1.0
@@ -624,7 +633,7 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
                             backgroundColor: Colors.grey.shade300,
                             circularStrokeCap: CircularStrokeCap.round,
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text('Word Goal: ${project.wordCountGoal}'),
                           Text(
                               'Current Word Count: ${project.currentWordCount}'),
@@ -685,18 +694,18 @@ class _ProgressTrackerScreenState extends State<ProgressTrackerScreen> {
                           ],
                         ),
                         ListTile(
-                          title: Text('Edit Project'),
-                          trailing: Icon(Icons.edit),
+                          title: const Text('Edit Project'),
+                          trailing: const Icon(Icons.edit),
                           onTap: () => _editProject(index),
                         ),
                         ListTile(
-                          title: Text('Delete Project'),
-                          trailing: Icon(Icons.delete),
+                          title: const Text('Delete Project'),
+                          trailing: const Icon(Icons.delete),
                           onTap: () => _deleteProject(index),
                         ),
                         ListTile(
-                          title: Text('Add Word Count'),
-                          trailing: Icon(Icons.add),
+                          title: const Text('Add Word Count'),
+                          trailing: const Icon(Icons.add),
                           onTap: () => _showAddWordCountDialog(index),
                         ),
                         ...project.wordCountEntries.map(

@@ -13,6 +13,8 @@ import 'dart:io';
 import 'package:path/path.dart' as path; // For handling file paths
 
 class AppNavigationDrawer extends StatefulWidget {
+  const AppNavigationDrawer({super.key});
+
   @override
   _AppNavigationDrawerState createState() => _AppNavigationDrawerState();
 }
@@ -52,8 +54,8 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
   Future<void> _openShortcut(String shortcut) async {
     if (shortcut.startsWith('http')) {
       // If it's a URL, use url_launcher to open it
-      if (await canLaunch(shortcut)) {
-        await launch(shortcut);
+      if (await canLaunchUrl(Uri.parse(shortcut))) {
+        await launchUrl(Uri.parse(shortcut));
       } else {
         throw 'Could not launch $shortcut';
       }
@@ -85,7 +87,7 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
               padding: EdgeInsets.zero,
               children: [
                 DrawerHeader(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.blueGrey,
                   ),
                   child: Row(
@@ -96,9 +98,9 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                         width: 48, // Adjust the size of the logo
                         height: 48,
                       ),
-                      SizedBox(width: 10), // Space between logo and text
+                      const SizedBox(width: 10), // Space between logo and text
                       // App Name on the right
-                      Text(
+                      const Text(
                         'Authors Toolbox',
                         style: TextStyle(
                           color: Colors.white,
@@ -110,26 +112,26 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                   ),
                 ),
                 ListTile(
-                  title: Text('Home'),
+                  title: const Text('Home'),
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => HomePage()),
+                      MaterialPageRoute(builder: (context) => const HomePage()),
                     );
                   },
                 ),
                 ListTile(
-                  title: Text('Assistant'),
+                  title: const Text('Assistant'),
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => AssistantScreen()),
+                          builder: (context) => const AssistantScreen()),
                     );
                   },
                 ),
                 ListTile(
-                  title: Text('Thesaurus'),
+                  title: const Text('Thesaurus'),
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
@@ -139,35 +141,36 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                   },
                 ),
                 ListTile(
-                  title: Text('Book Hub'),
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => BookHubScreen()),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text('Story Builder'),
+                  title: const Text('Book Hub'),
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => StoryBuilderScreen()),
+                          builder: (context) => const BookHubScreen()),
                     );
                   },
                 ),
                 ListTile(
-                  title: Text('Progress Tracker'),
+                  title: const Text('Story Builder'),
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => ProgressTrackerScreen()),
+                          builder: (context) => const StoryBuilderScreen()),
                     );
                   },
                 ),
-                Divider(),
+                ListTile(
+                  title: const Text('Progress Tracker'),
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ProgressTrackerScreen()),
+                    );
+                  },
+                ),
+                const Divider(),
                 // Dynamically display custom shortcuts with formatted names
                 ...customShortcuts.map((shortcut) {
                   return ListTile(
@@ -208,7 +211,7 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => SettingsScreen()),
+                            builder: (context) => const SettingsScreen()),
                       );
                     },
                     child: Icon(
@@ -242,7 +245,7 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                         context,
                         MaterialPageRoute(
                             builder: (context) =>
-                                ProfileScreen()), // Navigate to the profile screen
+                                const ProfileScreen()), // Navigate to the profile screen
                       );
                     },
                     child: CircleAvatar(

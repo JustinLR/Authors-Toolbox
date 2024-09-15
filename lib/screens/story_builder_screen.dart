@@ -13,6 +13,8 @@ import 'package:authors_toolbox/models/character.dart';
 import 'package:authors_toolbox/models/location.dart';
 
 class StoryBuilderScreen extends StatefulWidget {
+  const StoryBuilderScreen({super.key});
+
   @override
   _StoryBuilderScreenState createState() => _StoryBuilderScreenState();
 }
@@ -146,16 +148,16 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Story Builder'),
+        title: const Text('Story Builder'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: [
+          tabs: const [
             Tab(text: 'Character'),
             Tab(text: 'Location'),
           ],
         ),
       ),
-      drawer: AppNavigationDrawer(),
+      drawer: const AppNavigationDrawer(),
       body: Row(
         children: [
           Expanded(
@@ -174,7 +176,7 @@ class _StoryBuilderScreenState extends State<StoryBuilderScreen>
               ],
             ),
           ),
-          VerticalDivider(),
+          const VerticalDivider(),
           Expanded(
             flex: 2,
             child: TabBarView(

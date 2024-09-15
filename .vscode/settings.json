@@ -5,8 +5,8 @@
       "web/": true,
       "windows/": true,
       "linux/": true,
-      "macos/": true
-      "test/": true
+      "macos/": true,
+      "test/": true,
       "**/.dart_tool": true,
       "**/.idea": true,
       "**/.flutter-plugins": true,

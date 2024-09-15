@@ -22,14 +22,15 @@ dependencies:
   intl: ^0.19.0
   window_manager: ^0.4.2
   process_run: ^1.2.0
+  flutter_lints: ^2.0.1
+  flutter_secure_storage: ^9.2.2 # Moved to dependencies
+  http: ^1.2.2 # Moved to dependencies
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
   lint: ^2.0.0
-  flutter_secure_storage: ^9.2.2 # Check the latest version from pub.dev
-  http: ^1.2.2 # Ensure you're using the latest version of the http package
 
 flutter:
   uses-material-design: true
@@ -45,5 +46,5 @@ flutter_icons:
   android: true
   ios: true
   windows: true
-  image_path: "assets/icon.png"  # Path to your icon
-  adaptive_icon_background: "assets/icon.png"
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#FFFFFF"  # It's recommended to use a color here

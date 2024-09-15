@@ -8,13 +8,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Import s
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
   @override
   _SettingsScreenState createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
-  final _storage = FlutterSecureStorage(); // Secure storage instance
+  final _storage = const FlutterSecureStorage(); // Secure storage instance
 
   int _totalTokensUsed = 0;
 
@@ -59,7 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _apiKeyController.clear(); // Clear the input field after saving the key
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('API Key saved successfully!')),
+      const SnackBar(content: Text('API Key saved successfully!')),
     );
   }
 
@@ -69,8 +71,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _apiKeyController.clear();
     });
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('API Key cleared successfully!')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('API Key cleared successfully!')));
   }
 
   @override
@@ -79,76 +81,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Settings'),
+        title: const Text('Settings'),
       ),
-      drawer: AppNavigationDrawer(),
+      drawer: const AppNavigationDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Theme Selector
-            Text(
+            const Text(
               'Select Theme:',
               style: TextStyle(fontSize: 20),
             ),
             SwitchListTile(
-              title: Text('Dark Mode'),
+              title: const Text('Dark Mode'),
               value: themeProvider.isDarkMode,
               onChanged: (bool value) {
                 themeProvider.toggleTheme(value);
               },
             ),
-            SizedBox(height: 20),
-            Divider(),
+            const SizedBox(height: 20),
+            const Divider(),
             // OpenAI API Key Section
-            Text(
+            const Text(
               'OpenAI API Key:',
               style: TextStyle(fontSize: 20),
             ),
             TextField(
               controller: _apiKeyController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Enter OpenAI API Key',
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             // Buttons to save and clear the API key
             Row(
               children: [
                 ElevatedButton(
                   onPressed: _saveApiKey,
-                  child: Text('Save API Key'),
+                  child: const Text('Save API Key'),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: _clearApiKey,
-                  child: Text('Clear API Key'),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Clear API Key'),
                 ),
               ],
             ),
-            SizedBox(height: 20),
-            Divider(),
+            const SizedBox(height: 20),
+            const Divider(),
             // Add the token usage and cost details here
-            Text(
+            const Text(
               'OpenAI Usage:',
               style: TextStyle(fontSize: 20),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               'Total Tokens Used: $_totalTokensUsed',
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             Text(
               'Estimated Cost: \$${_calculateCost().toStringAsFixed(4)}',
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            Divider(),
+            const Divider(),
             ListTile(
-              title: Text('Manage Custom Shortcuts'),
+              title: const Text('Manage Custom Shortcuts'),
               onTap: () {
                 Navigator.push(
                   context,
@@ -158,9 +160,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
             ),
-            Divider(),
+            const Divider(),
             ListTile(
-              title: Text('About'),
+              title: const Text('About'),
               onTap: () {
                 Navigator.push(
                   context,

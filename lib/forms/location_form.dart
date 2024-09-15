@@ -5,7 +5,7 @@ class LocationForm extends StatefulWidget {
   final Function(Location) onSave;
   final Location? editingLocation; // If editing, pass the location here
 
-  LocationForm({required this.onSave, this.editingLocation});
+  const LocationForm({super.key, required this.onSave, this.editingLocation});
 
   @override
   _LocationFormState createState() => _LocationFormState();
@@ -36,7 +36,7 @@ class _LocationFormState extends State<LocationForm> {
                   : 'Create a New Location',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildTextInputField(
               labelText: 'Location Name',
               initialValue: _location.name,
@@ -50,7 +50,7 @@ class _LocationFormState extends State<LocationForm> {
                 return null;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildTextInputField(
               labelText: 'Description',
               initialValue: _location.description,
@@ -64,7 +64,7 @@ class _LocationFormState extends State<LocationForm> {
                 return null;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
@@ -77,7 +77,7 @@ class _LocationFormState extends State<LocationForm> {
                   );
                 }
               },
-              child: Text('Save Location'),
+              child: const Text('Save Location'),
             ),
           ],
         ),
@@ -97,7 +97,7 @@ class _LocationFormState extends State<LocationForm> {
       initialValue: initialValue,
       decoration: InputDecoration(
         labelText: labelText,
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
       ),
       onSaved: onSaved,
       validator: validator,

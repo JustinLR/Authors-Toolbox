@@ -5,7 +5,7 @@ class CharacterForm extends StatefulWidget {
   final Function(Character) onSave;
   final Character? editingCharacter; // If editing, pass the character here
 
-  CharacterForm({required this.onSave, this.editingCharacter});
+  const CharacterForm({super.key, required this.onSave, this.editingCharacter});
 
   @override
   _CharacterFormState createState() => _CharacterFormState();
@@ -37,7 +37,7 @@ class _CharacterFormState extends State<CharacterForm> {
                   : 'Create a New Character',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildTextInputField(
               labelText: 'Character Name',
               initialValue: _character.name,
@@ -51,7 +51,7 @@ class _CharacterFormState extends State<CharacterForm> {
                 return null;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildTextInputField(
               labelText: 'Character Age',
               initialValue: _character.age.toString(),
@@ -69,7 +69,7 @@ class _CharacterFormState extends State<CharacterForm> {
                 return null;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildTextInputField(
               labelText: 'Gender',
               initialValue: _character.gender,
@@ -91,12 +91,12 @@ class _CharacterFormState extends State<CharacterForm> {
                 _character.occupation = value;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Dropdown for Role
             DropdownButtonFormField<String>(
               value: _character.role,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Role',
                 border: OutlineInputBorder(),
               ),
@@ -112,7 +112,7 @@ class _CharacterFormState extends State<CharacterForm> {
                 });
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Physical Appearance
             Text(
@@ -175,7 +175,7 @@ class _CharacterFormState extends State<CharacterForm> {
                 _character.physicalTraits = value;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Powers and Abilities
             Text(
@@ -183,7 +183,7 @@ class _CharacterFormState extends State<CharacterForm> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             SwitchListTile(
-              title: Text('Has Powers'),
+              title: const Text('Has Powers'),
               value: _character.hasPowers,
               onChanged: (value) {
                 setState(() {
@@ -233,7 +233,7 @@ class _CharacterFormState extends State<CharacterForm> {
                     value?.split(',').map((s) => s.trim()).toList();
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Psychological Traits
             Text(
@@ -286,7 +286,7 @@ class _CharacterFormState extends State<CharacterForm> {
                 _character.moralAlignment = value;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Backstory
             Text(
@@ -322,7 +322,7 @@ class _CharacterFormState extends State<CharacterForm> {
                 _character.educationOrTraining = value;
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Relationships
             Text(
@@ -369,7 +369,7 @@ class _CharacterFormState extends State<CharacterForm> {
                     value?.split(',').map((s) => s.trim()).toList();
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Save Button
             ElevatedButton(
@@ -384,7 +384,7 @@ class _CharacterFormState extends State<CharacterForm> {
                   );
                 }
               },
-              child: Text('Save Character'),
+              child: const Text('Save Character'),
             ),
           ],
         ),
@@ -404,7 +404,7 @@ class _CharacterFormState extends State<CharacterForm> {
       initialValue: initialValue,
       decoration: InputDecoration(
         labelText: labelText,
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
       ),
       onSaved: onSaved,
       validator: validator,

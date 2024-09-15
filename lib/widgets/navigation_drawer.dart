@@ -5,7 +5,6 @@ import 'package:authors_toolbox/screens/progress_tracker_screen.dart';
 import 'package:authors_toolbox/screens/thesaurus_screen.dart';
 import 'package:authors_toolbox/screens/story_builder_screen.dart';
 import 'package:authors_toolbox/screens/settings_screen.dart';
-import 'package:authors_toolbox/screens/assistant_screen.dart';
 import 'package:authors_toolbox/screens/profile_screen.dart'; // Add your profile screen
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -117,16 +116,6 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => const HomePage()),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: const Text('Assistant'),
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AssistantScreen()),
                     );
                   },
                 ),

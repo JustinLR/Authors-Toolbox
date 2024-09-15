@@ -1,4 +1,3 @@
-import 'package:authors_toolbox/screens/assistant_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart'; // Import window_manager
 import 'package:provider/provider.dart';
@@ -52,7 +51,6 @@ class MyApp extends StatelessWidget {
         '/book_hub': (context) => const BookHubScreen(), // Book Hub route
         '/progress_tracker': (context) =>
             const ProgressTrackerScreen(), // Progress Tracker route
-        '/assistant': (context) => const AssistantScreen(), // Assistant route
         '/thesaurus': (context) => ThesaurusScreen(), // Thesaurus route
         '/story_builder': (context) =>
             const StoryBuilderScreen(), // Story Builder route

@@ -5,7 +5,7 @@ import 'package:authors_toolbox/screens/home_page.dart';
 import 'package:authors_toolbox/screens/book_hub_screen.dart';
 import 'package:authors_toolbox/screens/progress_tracker_screen.dart';
 import 'package:authors_toolbox/screens/thesaurus_screen.dart';
-import 'package:authors_toolbox/screens/story_builder_screen.dart';
+import 'package:authors_toolbox/screens/story_assistant_screen.dart';
 import 'package:authors_toolbox/screens/settings_screen.dart';
 import 'theme_provider.dart';
 
@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
             const ProgressTrackerScreen(), // Progress Tracker route
         '/thesaurus': (context) => ThesaurusScreen(), // Thesaurus route
         '/story_builder': (context) =>
-            const StoryBuilderScreen(), // Story Builder route
+            const StoryAssistantScreen(), // Story Builder route
         '/settings': (context) => const SettingsScreen(), // Settings route
       },
     );

@@ -4,7 +4,6 @@ import 'package:authors_toolbox/models/book.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert'; // For JSON encoding/decoding
 import 'package:file_picker/file_picker.dart';
@@ -62,6 +61,161 @@ class _BookHubScreenState extends State<BookHubScreen> {
     super.dispose();
   }
 
+  void _showBookPopup(Book book, int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Book cover on the left
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        height: double
+                            .infinity, // Make the image span the full height of the window
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: book.imageUrl.isNotEmpty
+                                ? FileImage(File(book.imageUrl))
+                                    as ImageProvider
+                                : const AssetImage('assets/placeholder.png'),
+                            fit: BoxFit
+                                .fitHeight, // Scale the image to fit the full height
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                        width: 20), // Space between image and content
+
+                    // Description and buttons on the right
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Add some space above the description
+                          const SizedBox(
+                              height:
+                                  20), // Adds space between the top and the description
+
+                          // Book description
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: Text(
+                                book.description?.isNotEmpty == true
+                                    ? book.description!
+                                    : 'No description available.',
+                                style: const TextStyle(fontSize: 16),
+                                textAlign: TextAlign.left,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Centering the Open and Edit buttons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Open button
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context)
+                                      .pop(); // Close the popup
+                                  _openFile(
+                                      book.filePath, index); // Open the file
+                                },
+                                child: const Text('Open'),
+                              ),
+                              const SizedBox(width: 10),
+                              // Edit button
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context)
+                                      .pop(); // Close the popup
+                                  _showEditDialog(
+                                      index); // Open the edit dialog
+                                },
+                                child: const Text('Edit'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Delete button at the top right
+              Positioned(
+                top: 8,
+                right: 8,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red, // Set the button color to red
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close the popup first
+                    _showDeleteConfirmationDialog(
+                        book, index); // Show confirmation dialog
+                  },
+                  child: const Text('Delete'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(Book book, int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: const Text(
+              'Are you sure you want to delete this book? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the confirmation dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Colors.red, // Set the confirm button color to red
+              ),
+              onPressed: () {
+                // Remove the book from the list and close both dialogs
+                setState(() {
+                  books.removeAt(index);
+                });
+                Navigator.of(context).pop(); // Close the confirmation dialog
+                _saveBooksToFile(); // Save changes after deletion
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   ////////////////////////////////////////
   /////Remove Series from Edit Dialog/////
   ////////////////////////////////////////
@@ -100,24 +254,25 @@ class _BookHubScreenState extends State<BookHubScreen> {
   ////////////////////////////////////
   /////Initialize Text Controllers////
   ////////////////////////////////////
+////////////////////////////////////
+/////Initialize Text Controllers////
+////////////////////////////////////
   void _initializeControllers() {
     _titleControllers.clear();
     _fileControllers.clear();
     _urlControllers.clear();
-    selectedSeriesMap.clear(); // Clear the map to avoid old data
+    selectedSeriesMap.clear(); // Ensure the map is cleared
 
     for (var i = 0; i < books.length; i++) {
       _titleControllers.add(TextEditingController(text: books[i].title));
       _fileControllers.add(TextEditingController(text: books[i].filePath));
       _urlControllers.add(TextEditingController(text: books[i].url));
 
-      // Ensure the book's series is valid, fallback to 'None' if not
       if (!seriesList.contains(books[i].series) ||
           books[i].series == 'Show All') {
         books[i].series = 'None';
       }
 
-      // Initialize the selectedSeriesMap with each book's current series
       selectedSeriesMap[i] = books[i].series;
     }
   }
@@ -243,9 +398,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
   Widget buildBookCard(Book book, int index) {
     return InkWell(
       onTap: () {
-        // Define what happens when the card is clicked.
-        // For example, navigate to a book details page or open an edit dialog.
-        _showEditDialog(index);
+        // Open the popup window with book details
+        _showBookPopup(book, index);
       },
       child: Container(
         decoration: BoxDecoration(
@@ -269,9 +423,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
           borderRadius: BorderRadius.circular(12),
           child: Stack(
             children: [
-              ///////////////////////////
-              /////Book Cover Image//////
-              ///////////////////////////
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -284,99 +435,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
                   ),
                 ),
               ),
-              ///////////////////////////
-              /////Series Tag on Top/////
-              ///////////////////////////
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0, vertical: 4.0),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(6),
-                      bottomRight: Radius.circular(6),
-                    ),
-                  ),
-                  child: Text(
-                    book.series != 'None'
-                        ? book.series
-                        : '', // Show series name if available
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-              ),
-              /////////////////////////
-              /////Fade Overlay////////
-              /////////////////////////
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.1),
-                        Colors.black.withOpacity(0.5),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              /////////////////////////////
-              /////Dropdown for Actions////
-              /////////////////////////////
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 4,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.white),
-                    onSelected: (String result) {
-                      if (result == 'edit') {
-                        _showEditDialog(index);
-                      } else if (result == 'delete') {
-                        _removeBook(index);
-                      } else if (result == 'file') {
-                        _openFile(book.filePath, index);
-                      } else if (result == 'url') {
-                        _launchUrl(book.url);
-                      }
-                    },
-                    itemBuilder: (BuildContext context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      const PopupMenuItem(
-                          value: 'delete', child: Text('Delete')),
-                      const PopupMenuItem(value: 'file', child: Text('Open')),
-                      const PopupMenuItem(value: 'url', child: Text('URL')),
-                    ],
-                  ),
-                ),
-              ),
-              ///////////////////////////
-              /////Centered Title////////
-              ///////////////////////////
               Positioned(
                 bottom: 20,
                 left: 0,
@@ -390,20 +448,16 @@ class _BookHubScreenState extends State<BookHubScreen> {
                       color: Colors.black.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Column(
-                      children: [
-                        Text(
-                          book.title.isNotEmpty ? book.title : 'Untitled',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                    child: Text(
+                      book.title.isNotEmpty ? book.title : 'Untitled',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -465,10 +519,11 @@ class _BookHubScreenState extends State<BookHubScreen> {
   void _addNewBook() {
     setState(() {
       books.add(Book(title: '', filePath: '', url: '', series: 'None'));
-      _initializeControllers();
+      _initializeControllers(); // Ensure controllers are initialized after adding a new book
     });
 
-    _showEditDialog(books.length - 1);
+    _showEditDialog(
+        books.length - 1); // Show the dialog for the newly added book
   }
 
   /////////////////////////////////////////
@@ -477,6 +532,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
   void _showEditDialog(int index) async {
     TextEditingController imageController =
         TextEditingController(text: books[index].imageUrl);
+    TextEditingController descriptionController =
+        TextEditingController(text: books[index].description ?? '');
 
     await showDialog(
       context: context,
@@ -493,9 +550,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
                   decoration: const InputDecoration(labelText: 'Title'),
                 ),
                 const SizedBox(height: 10),
-                ////////////////////////////////
-                // Image picker for book cover//
-                ////////////////////////////////
+
+                // Image picker for book cover
                 Row(
                   children: [
                     Expanded(
@@ -520,9 +576,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                //////////////////////////////
-                // File picker for file path//
-                //////////////////////////////
+
+                // File picker for file path
                 Row(
                   children: [
                     Expanded(
@@ -546,17 +601,15 @@ class _BookHubScreenState extends State<BookHubScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                ////////////////////
-                // URL input field//
-                ////////////////////
+
+                // URL input field
                 TextField(
                   controller: _urlControllers[index],
                   decoration: const InputDecoration(labelText: 'URL'),
                 ),
                 const SizedBox(height: 10),
-                /////////////////////////////////////////////
-                // Dropdown for selecting the book's series//
-                /////////////////////////////////////////////
+
+                // Dropdown for selecting the book's series
                 Row(
                   children: [
                     Expanded(
@@ -597,6 +650,15 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+
+                // Description input field (moved to the bottom)
+                TextField(
+                  controller:
+                      descriptionController, // Directly tied to the description
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  maxLines: 3, // Allow multiple lines
+                ),
               ],
             ),
           ),
@@ -615,6 +677,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
                   books[index].filePath = _fileControllers[index].text;
                   books[index].url = _urlControllers[index].text;
                   books[index].imageUrl = imageController.text;
+                  books[index].description =
+                      descriptionController.text; // Save the description
                   _saveBooksToFile(); // Save changes to file
                 });
                 Navigator.of(dialogContext).pop(); // Close the dialog
@@ -643,17 +707,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
   }
 
   /////////////////////////////////////
-  /////Helper Method: Remove Book//////
-  /////////////////////////////////////
-  void _removeBook(int index) {
-    setState(() {
-      books.removeAt(index);
-      _initializeControllers();
-      _saveBooksToFile();
-    });
-  }
-
-  /////////////////////////////////////
   /////Helper Method: Open File////////
   /////////////////////////////////////
   void _openFile(String filePath, int index) async {
@@ -665,19 +718,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
       await Process.run('open', [filePath]);
     } else if (Platform.isLinux) {
       await Process.run('xdg-open', [filePath]);
-    }
-  }
-
-  /////////////////////////////////////
-  /////Helper Method: Launch URL///////
-  /////////////////////////////////////
-  void _launchUrl(String url) async {
-    if (url.isNotEmpty && await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
-    } else {
-      if (kDebugMode) {
-        print("Invalid or empty URL");
-      }
     }
   }
 

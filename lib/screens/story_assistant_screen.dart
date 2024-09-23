@@ -24,19 +24,95 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
   List<Character> _characters = [];
   List<Location> _locations = [];
   List<String> _chatHistory = [];
+  bool _clearOutput = false; // Checkbox state for clearing output
+  String? _lastGptResponse; // To store the last GPT response for editing
 
   final _storage = const FlutterSecureStorage(); // Secure storage instance
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDataFromStorage();
+  }
+
+  @override
+  void dispose() {
+    _saveDataToStorage();
+    super.dispose();
+  }
+
+  // Save data to storage
+  void _saveDataToStorage() async {
+    await _storage.write(key: 'characters', value: jsonEncode(_characters));
+    await _storage.write(key: 'locations', value: jsonEncode(_locations));
+    await _storage.write(key: 'chatHistory', value: jsonEncode(_chatHistory));
+  }
+
+  // Load data from storage
+  void _loadDataFromStorage() async {
+    String? charactersJson = await _storage.read(key: 'characters');
+    String? locationsJson = await _storage.read(key: 'locations');
+    String? chatHistoryJson = await _storage.read(key: 'chatHistory');
+
+    setState(() {
+      if (charactersJson != null) {
+        _characters = (jsonDecode(charactersJson) as List)
+            .map((e) => Character.fromJson(e))
+            .toList();
+      }
+      if (locationsJson != null) {
+        _locations = (jsonDecode(locationsJson) as List)
+            .map((e) => Location.fromJson(e))
+            .toList();
+      }
+      if (chatHistoryJson != null) {
+        _chatHistory = List<String>.from(jsonDecode(chatHistoryJson));
+      }
+    });
+  }
+
+  bool _isEditRequest(String userInput) {
+    final lowerInput = userInput.toLowerCase();
+    return lowerInput.contains("edit") ||
+        lowerInput.contains("change") ||
+        lowerInput.contains("not quite") ||
+        lowerInput.contains("can we fix") ||
+        lowerInput.contains("that's not right") ||
+        lowerInput.contains("adjust") ||
+        lowerInput.contains("modify") ||
+        lowerInput.contains("improve") ||
+        lowerInput.contains("not what i meant") ||
+        lowerInput.contains("tweak") ||
+        lowerInput.contains("can you redo") ||
+        lowerInput.contains("previous") ||
+        lowerInput.contains("last") ||
+        lowerInput.contains("request");
+  }
 
   // Fetch the API key from secure storage
   Future<String?> _getApiKey() async {
     return await _storage.read(key: 'openai_api_key');
   }
 
-  // Make a real request to the OpenAI API
-  Future<String> _sendToGpt(String input) async {
+// Make a real request to the OpenAI API
+  Future<String> _sendToGpt(String input, {bool isEdit = false}) async {
     String? apiKey = await _getApiKey();
     if (apiKey == null) {
       return jsonEncode({'type': 'error', 'message': 'API key not found.'});
+    }
+
+    final messages = [
+      {
+        'role': 'system',
+        'content':
+            'You are a helpful assistant. Always place conversational replies before "---" and character/location descriptions after "---". Also provide character descriptions in a format useful for character sheets, adding new sections if necessary. Structure each response like this: **Name**, **Appearance**, **Personality**, **Skills**, **Backstory**, and any other sections you find relevant.'
+      },
+      {'role': 'user', 'content': input}
+    ];
+
+    // If it's an edit request, include the previous GPT response in the conversation
+    if (isEdit && _lastGptResponse != null) {
+      messages.insert(1, {'role': 'assistant', 'content': _lastGptResponse!});
     }
 
     final response = await http.post(
@@ -47,14 +123,7 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
       },
       body: jsonEncode({
         'model': 'gpt-4o',
-        'messages': [
-          {
-            'role': 'system',
-            'content':
-                'You are a helpful assistant. Always place conversational replies before "---" and character/location descriptions after "---". Also provide character descriptions in a format useful for character sheets, adding new sections if necessary. Structure each response like this: **Name**, **Appearance**, **Personality**, **Skills**, **Backstory**, and any other sections you find relevant.'
-          },
-          {'role': 'user', 'content': input}
-        ],
+        'messages': messages,
         'max_tokens': 500,
         'n': 1,
         'stop': null,
@@ -79,7 +148,10 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
     });
 
     String userInput = _chatController.text;
-    String gptResponse = await _sendToGpt(userInput);
+    bool isEditRequest = _isEditRequest(userInput);
+
+    // If it's an edit request, send the previous GPT response along with the new user input
+    String gptResponse = await _sendToGpt(userInput, isEdit: isEditRequest);
     Map<String, dynamic> parsedResponse = jsonDecode(gptResponse);
 
     print('Parsed response: $parsedResponse');
@@ -88,14 +160,22 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
         parsedResponse['choices'].isNotEmpty) {
       String content = parsedResponse['choices'][0]['message']['content'];
       setState(() {
-        // Add user input to the chat history
-        _chatHistory.add('User: $userInput');
+        // Add user input to the chat history, but only for new requests, not edits
+        if (!isEditRequest) {
+          _chatHistory.add('User: $userInput');
+        } else {
+          // For edits, we show that the user wanted to modify something
+          _chatHistory.add('User: (Edit Request) $userInput');
+        }
 
         // Clear input field
         _chatController.clear();
 
         // Parse the response to split conversation and story-building content
         _parseGptResponse(content);
+
+        // Save the last GPT response for future edits
+        _lastGptResponse = content;
       });
     } else {
       print('Error: ${parsedResponse['message']}');
@@ -139,10 +219,13 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
     setState(() {});
   }
 
-  // Clear the chat history
-  void _clearChat() {
+  // Clear the chat history and optionally clear the output
+  void _clearChatAndOutput() {
     setState(() {
       _chatHistory.clear();
+      if (_clearOutput) {
+        _gptOutput = ''; // Clear the output box if the checkbox is checked
+      }
     });
   }
 
@@ -268,9 +351,19 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
                             ),
                             const SizedBox(width: 10),
                             ElevatedButton(
-                              onPressed: _clearChat,
+                              onPressed: _clearChatAndOutput,
                               child: const Text('Clear Chat'),
                             ),
+                            const SizedBox(width: 10),
+                            Checkbox(
+                              value: _clearOutput,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _clearOutput = value ?? false;
+                                });
+                              },
+                            ),
+                            const Text('Clear Output Box')
                           ],
                         ),
                       ],

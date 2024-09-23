@@ -4,35 +4,37 @@ class Book {
   String url;
   String imageUrl;
   String series;
+  String? description; // Add description field
 
   Book({
     required this.title,
     required this.filePath,
     required this.url,
+    required this.series,
     this.imageUrl = '',
-    this.series = 'None', // Default to 'None' for individual books
+    this.description, // Initialize description
   });
 
-  // Convert a Book object into a Map object for JSON encoding
-  Map<String, dynamic> toJson() => {
-        'title': title,
-        'filePath': filePath,
-        'url': url,
-        'imageUrl': imageUrl,
-        'series': series,
-      };
-
-  // Convert a Map object into a Book object for JSON decoding
+  // Update fromJson and toJson if you're using JSON serialization:
   factory Book.fromJson(Map<String, dynamic> json) {
-    // Ensure the series is valid
-    String series =
-        json['series']?.isNotEmpty == true ? json['series'] : 'None';
     return Book(
       title: json['title'],
       filePath: json['filePath'],
       url: json['url'],
+      series: json['series'],
       imageUrl: json['imageUrl'] ?? '',
-      series: series,
+      description: json['description'], // Load description from JSON
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'filePath': filePath,
+      'url': url,
+      'series': series,
+      'imageUrl': imageUrl,
+      'description': description, // Save description to JSON
+    };
   }
 }

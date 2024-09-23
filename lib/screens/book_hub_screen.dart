@@ -602,13 +602,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // URL input field
-                TextField(
-                  controller: _urlControllers[index],
-                  decoration: const InputDecoration(labelText: 'URL'),
-                ),
-                const SizedBox(height: 10),
-
                 // Dropdown for selecting the book's series
                 Row(
                   children: [

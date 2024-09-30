@@ -15,7 +15,9 @@
       "**/authors_toolbox.iml": true,
       "**/pubspec.lock": true,
       "analysis_options.yaml/": true,
-      "build/" : true
+      "build/" : true,
+      "README.md/" : true,
+      ".gitignore" : true
     }
   }
   

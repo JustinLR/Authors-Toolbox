@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
-import 'package:authors_toolbox/theme_provider.dart';
-import 'package:authors_toolbox/screens/about_screen.dart';
-import 'package:authors_toolbox/screens/custom_shortcuts_screen.dart';
+import 'package:authors_toolbox/theme/theme_provider.dart';
+import 'package:authors_toolbox/screens/about/about_screen.dart';
+import 'package:authors_toolbox/screens/custom/custom_shortcuts_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Import secure storage package
 import 'package:shared_preferences/shared_preferences.dart';
 

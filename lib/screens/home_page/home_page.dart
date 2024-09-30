@@ -82,29 +82,6 @@ class HomePage extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(),
-            // Featured Tools or Tips
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Writing Tip of the Day',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    '“Show, don’t tell” - Instead of saying a character is '
-                    'angry, show their body language and actions that convey anger.',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

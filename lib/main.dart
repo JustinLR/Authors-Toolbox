@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart'; // Import window_manager
 import 'package:provider/provider.dart';
-import 'package:authors_toolbox/screens/home_page.dart';
-import 'package:authors_toolbox/screens/book_hub_screen.dart';
-import 'package:authors_toolbox/screens/progress_tracker_screen.dart';
-import 'package:authors_toolbox/screens/thesaurus_screen.dart';
-import 'package:authors_toolbox/screens/story_assistant_screen.dart';
-import 'package:authors_toolbox/screens/settings_screen.dart';
-import 'theme_provider.dart';
+import 'package:authors_toolbox/screens/home_page/home_page.dart';
+import 'package:authors_toolbox/screens/book/book_hub_screen.dart';
+import 'package:authors_toolbox/screens/progress_tracker/progress_tracker_screen.dart';
+import 'package:authors_toolbox/screens/thesaurus/thesaurus_screen.dart';
+import 'package:authors_toolbox/screens/story_assistant/story_assistant_screen.dart';
+import 'package:authors_toolbox/screens/settings/settings_screen.dart';
+import 'theme/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding

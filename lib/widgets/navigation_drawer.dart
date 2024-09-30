@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:authors_toolbox/screens/home_page.dart';
-import 'package:authors_toolbox/screens/book_hub_screen.dart';
-import 'package:authors_toolbox/screens/progress_tracker_screen.dart';
-import 'package:authors_toolbox/screens/thesaurus_screen.dart';
-import 'package:authors_toolbox/screens/story_assistant_screen.dart';
-import 'package:authors_toolbox/screens/settings_screen.dart';
-import 'package:authors_toolbox/screens/profile_screen.dart'; // Add your profile screen
+import 'package:authors_toolbox/screens/home_page/home_page.dart';
+import 'package:authors_toolbox/screens/book/book_hub_screen.dart';
+import 'package:authors_toolbox/screens/progress_tracker/progress_tracker_screen.dart';
+import 'package:authors_toolbox/screens/thesaurus/thesaurus_screen.dart';
+import 'package:authors_toolbox/screens/story_assistant/story_assistant_screen.dart';
+import 'package:authors_toolbox/screens/settings/settings_screen.dart';
+import 'package:authors_toolbox/screens/profile/profile_screen.dart'; // Add your profile screen
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';

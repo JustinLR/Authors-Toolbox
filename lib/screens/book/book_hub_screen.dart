@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:authors_toolbox/models/book.dart';
+import 'package:authors_toolbox/models/book/book.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';

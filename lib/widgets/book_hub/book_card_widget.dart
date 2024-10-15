@@ -39,8 +39,9 @@ class BookCardWidget extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: book.imageUrl.isNotEmpty
-                          ? FileImage(File(book.imageUrl)) as ImageProvider
+                      image: book.coverImagePath!.isNotEmpty
+                          ? FileImage(File(book.coverImagePath!))
+                              as ImageProvider
                           : const AssetImage('assets/placeholder.png'),
                       fit: BoxFit.cover,
                     ),

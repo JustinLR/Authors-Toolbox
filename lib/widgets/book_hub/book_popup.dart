@@ -55,8 +55,8 @@ void showBookPopup(BuildContext context, Book book, int index) {
 }
 
 Widget _buildBookImage(Book book) {
-  return book.imageUrl.isNotEmpty
-      ? Image.file(File(book.imageUrl), height: 150)
+  return book.coverImagePath!.isNotEmpty
+      ? Image.file(File(book.coverImagePath!), height: 150)
       : const Icon(Icons.book, size: 150);
 }
 

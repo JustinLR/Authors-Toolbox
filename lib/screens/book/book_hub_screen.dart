@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:authors_toolbox/screens/book/series_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:authors_toolbox/models/book/book.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:convert'; // For JSON encoding/decoding
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:collection/collection.dart';
+import 'series_manager.dart';
 
 class BookHubScreen extends StatefulWidget {
   const BookHubScreen({super.key});
@@ -21,7 +23,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
   /////Global Variables/////
   //////////////////////////
   List<Book> books = [];
-  List<String> seriesList = ["Show All"]; // Default to "Show All"
+  SeriesManager seriesManager = SeriesManager();
   String selectedSeries = "Show All"; // Default to show all books
 
   Map<int, String> selectedSeriesMap = {}; // Tracks the series for each book
@@ -39,7 +41,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSeriesFromFile().then((_) {
+    // Load series from file and assign to seriesManager
+    seriesManager.loadSeriesFromFile().then((_) {
       _loadBooksFromFile(); // Load books after the series list is loaded
     });
   }
@@ -85,8 +88,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           image: DecorationImage(
-                            image: book.imageUrl.isNotEmpty
-                                ? FileImage(File(book.imageUrl))
+                            image: book.coverImagePath!.isNotEmpty
+                                ? FileImage(File(book.coverImagePath!))
                                     as ImageProvider
                                 : const AssetImage('assets/placeholder.png'),
                             fit: BoxFit
@@ -216,44 +219,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
     );
   }
 
-  ////////////////////////////////////////
-  /////Remove Series from Edit Dialog/////
-  ////////////////////////////////////////
-  void _removeSeriesFromEdit(Book book) {
-    if (book.series != 'None' && seriesList.contains(book.series)) {
-      setState(() {
-        for (var b in books) {
-          if (b.series == book.series) {
-            b.series = 'None'; // Reset the series for any books in this group
-          }
-        }
-
-        // Remove the series from the list
-        seriesList.remove(book.series);
-
-        // Update the map to reset any books using the removed series
-        selectedSeriesMap.updateAll((key, value) {
-          return value == book.series ? 'None' : value;
-        });
-
-        book.series = 'None'; // Reset the current book's series
-        _saveBooksToFile(); // Save the changes
-        _saveSeriesToFile(); // Save the changes to series list
-      });
-    }
-  }
-
-  /////////////////////////
-  // Get Series File Path//
-  /////////////////////////
-  Future<String> _getSeriesFilePath() async {
-    final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/series.json';
-  }
-
-  ////////////////////////////////////
-  /////Initialize Text Controllers////
-  ////////////////////////////////////
 ////////////////////////////////////
 /////Initialize Text Controllers////
 ////////////////////////////////////
@@ -268,7 +233,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
       _fileControllers.add(TextEditingController(text: books[i].filePath));
       _urlControllers.add(TextEditingController(text: books[i].url));
 
-      if (!seriesList.contains(books[i].series) ||
+      if (!seriesManager.seriesList.contains(books[i].series) ||
           books[i].series == 'Show All') {
         books[i].series = 'None';
       }
@@ -276,6 +241,25 @@ class _BookHubScreenState extends State<BookHubScreen> {
       selectedSeriesMap[i] = books[i].series;
     }
   }
+
+  // Helper method to sort books
+  void _sortBooks() {
+    setState(() {
+      if (_selectedSortOption == 'Title') {
+        books.sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+      } else if (_selectedSortOption == 'File Path') {
+        books.sort((a, b) =>
+            a.filePath.toLowerCase().compareTo(b.filePath.toLowerCase()));
+      } else if (_selectedSortOption == 'Series') {
+        books.sort(
+            (a, b) => a.series.toLowerCase().compareTo(b.series.toLowerCase()));
+      }
+    });
+  }
+
+  // Sorting criteria options
+  String _selectedSortOption = 'Title'; // Default sort by title
 
   ///////////////////////////////
   /////Build Main UI Scaffold////
@@ -290,12 +274,32 @@ class _BookHubScreenState extends State<BookHubScreen> {
             const Text('Book Hub'),
             Row(
               children: [
+                // Import button for importing books
                 ElevatedButton.icon(
-                  onPressed: _importBooks, // Import books function
+                  onPressed: _importBooksWithSeriesAssignment,
                   icon: const Icon(Icons.import_export),
                   label: const Text('Import'),
                 ),
                 const SizedBox(width: 20),
+
+                // Sorting Dropdown
+                DropdownButton<String>(
+                  value: _selectedSortOption,
+                  items: ['Title', 'File Path', 'Series'].map((String option) {
+                    return DropdownMenuItem<String>(
+                      value: option,
+                      child: Text(option),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedSortOption = newValue!;
+                      _sortBooks(); // Sort books based on selected option
+                    });
+                  },
+                ),
+                const SizedBox(width: 20),
+
                 /////////////////////////////
                 /////Series/Groups Dropdown//
                 /////////////////////////////
@@ -306,10 +310,10 @@ class _BookHubScreenState extends State<BookHubScreen> {
                           selectedSeries, // This is the filter value for showing books by series
                       items: [
                         'Show All', // Default filter option
-                        ...seriesList.where((s) =>
+                        ...seriesManager.seriesList.where((s) =>
                             s != 'None' &&
-                            s !=
-                                'Show All'), // Exclude 'None' and avoid duplicating 'Show All'
+                            s != 'Show All'), // Exclude 'None' and 'Show All'
+                        'Manage Series...', // Add 'Manage Series' option at the end
                       ].map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
@@ -317,28 +321,53 @@ class _BookHubScreenState extends State<BookHubScreen> {
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
-                        setState(() {
-                          if (seriesList.contains(newValue)) {
-                            selectedSeries = newValue!;
-                          } else {
-                            selectedSeries =
-                                'Show All'; // Fallback to a safe value
-                          }
-                        });
+                        if (newValue == 'Manage Series...') {
+                          Navigator.of(context)
+                              .push(
+                            MaterialPageRoute(
+                              builder: (context) => SeriesManagementScreen(
+                                books: books, // Pass the current books
+                                seriesList: seriesManager.seriesList,
+                                saveBooks: _saveBooksToFile,
+                                saveSeries: seriesManager.saveSeriesToFile,
+                                seriesManager: seriesManager,
+                              ),
+                            ),
+                          )
+                              .then((result) {
+                            if (result != null &&
+                                result is Map<String, dynamic>) {
+                              setState(() {
+                                // Update the books and series with the returned values
+                                seriesManager.seriesList =
+                                    result['seriesManager.seriesList'] ??
+                                        seriesManager.seriesList;
+                                books = result['books'] ?? books;
+                              });
+                            }
+                          });
+                        } else {
+                          setState(() {
+                            selectedSeries = newValue ??
+                                'Show All'; // Update the selected series
+                          });
+                        }
                       },
                     ),
-                    const SizedBox(width: 5),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: _addSeries, // Add a new series
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.remove),
-                      onPressed: _removeSeries, // Remove selected series
-                    ),
+                    //const SizedBox(width: 5),
+                    //IconButton(
+                    //  icon: const Icon(Icons.add),
+                    //  onPressed: _addSeries, // Add a new series
+                    //),
+                    //IconButton(
+                    //  icon: const Icon(Icons.remove),
+                    //  onPressed: _removeSeries, // Remove selected series
+                    //),
                   ],
                 ),
                 const SizedBox(width: 20),
+
+                // Card size slider
                 const Text('Card Size:'),
                 SizedBox(
                   width: 150, // Limit the slider width
@@ -373,7 +402,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
                 mainAxisSpacing: 10, // Space between cards vertically
                 childAspectRatio: 0.63, // Adjust aspect ratio for wider cards
               ),
-              // Filter books based on the selected series
               itemCount: books.where(_filterBooksBySeries).length + 1,
               itemBuilder: (context, index) {
                 final filteredBooks =
@@ -398,7 +426,6 @@ class _BookHubScreenState extends State<BookHubScreen> {
   Widget buildBookCard(Book book, int index) {
     return InkWell(
       onTap: () {
-        // Open the popup window with book details
         _showBookPopup(book, index);
       },
       child: Container(
@@ -423,18 +450,21 @@ class _BookHubScreenState extends State<BookHubScreen> {
           borderRadius: BorderRadius.circular(12),
           child: Stack(
             children: [
+              // Display book cover or placeholder
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: book.imageUrl.isNotEmpty
-                          ? FileImage(File(book.imageUrl)) as ImageProvider
+                      image: book.coverImagePath!.isNotEmpty
+                          ? FileImage(File(book.coverImagePath!))
+                              as ImageProvider
                           : const AssetImage('assets/placeholder.png'),
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
               ),
+              // Display book title
               Positioned(
                 bottom: 20,
                 left: 0,
@@ -462,11 +492,36 @@ class _BookHubScreenState extends State<BookHubScreen> {
                   ),
                 ),
               ),
+              // IconButton to select a cover image
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.image, color: Colors.white),
+                  onPressed: () async {
+                    String? coverPath = await _pickCoverImage();
+                    if (coverPath != null) {
+                      _updateBookCover(book.filePath, coverPath);
+                    }
+                  },
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<String?> _pickCoverImage() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image, // Restrict the picker to images only
+    );
+
+    if (result != null && result.files.single.path != null) {
+      return result.files.single.path; // Return the selected image path
+    }
+    return null;
   }
 
   //////////////////////////////////
@@ -518,7 +573,12 @@ class _BookHubScreenState extends State<BookHubScreen> {
   ////////////////////////////////////////////
   void _addNewBook() {
     setState(() {
-      books.add(Book(title: '', filePath: '', url: '', series: 'None'));
+      books.add(Book(
+          title: '',
+          filePath: '',
+          url: '',
+          series: 'None',
+          coverImagePath: ''));
       _initializeControllers(); // Ensure controllers are initialized after adding a new book
     });
 
@@ -531,7 +591,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
   /////////////////////////////////////////
   void _showEditDialog(int index) async {
     TextEditingController imageController =
-        TextEditingController(text: books[index].imageUrl);
+        TextEditingController(text: books[index].coverImagePath);
     TextEditingController descriptionController =
         TextEditingController(text: books[index].description ?? '');
 
@@ -608,12 +668,13 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     Expanded(
                       child: DropdownButton<String>(
                         value: books[index].series.isNotEmpty &&
-                                seriesList.contains(books[index].series)
+                                seriesManager.seriesList
+                                    .contains(books[index].series)
                             ? books[index].series
                             : 'None', // Fallback to 'None' if the series is invalid or empty
                         items: [
                           'None', // Default option for books without a series
-                          ...seriesList.where((s) =>
+                          ...seriesManager.seriesList.where((s) =>
                               s !=
                               'Show All') // Exclude "Show All" from series options
                         ].map((String value) {
@@ -632,15 +693,15 @@ class _BookHubScreenState extends State<BookHubScreen> {
                     ),
                     const SizedBox(width: 5),
                     // Add Series Button
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: _addSeries, // Add a new series
-                    ),
+                    //IconButton(
+                    //  icon: const Icon(Icons.add),
+                    //  onPressed: _addSeries, // Add a new series
+                    //),
                     // Remove Series Button
-                    IconButton(
-                      icon: const Icon(Icons.remove),
-                      onPressed: () => _removeSeriesFromEdit(books[index]),
-                    ),
+                    //IconButton(
+                    //  icon: const Icon(Icons.remove),
+                    //  onPressed: () => _removeSeriesFromEdit(books[index]),
+                    //),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -669,7 +730,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
                   books[index].title = _titleControllers[index].text;
                   books[index].filePath = _fileControllers[index].text;
                   books[index].url = _urlControllers[index].text;
-                  books[index].imageUrl = imageController.text;
+                  books[index].coverImagePath = imageController.text;
                   books[index].description =
                       descriptionController.text; // Save the description
                   _saveBooksToFile(); // Save changes to file
@@ -693,7 +754,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        books[index].imageUrl = pickedFile.path;
+        books[index].coverImagePath = pickedFile.path;
         _saveBooksToFile();
       });
     }
@@ -717,64 +778,109 @@ class _BookHubScreenState extends State<BookHubScreen> {
   /////////////////////////////////////
   /////Helper Method: Import Books/////
   /////////////////////////////////////
-  void _importBooks() async {
+  void _importBooksWithSeriesAssignment() async {
     String? directoryPath = await FilePicker.platform.getDirectoryPath();
-    if (directoryPath == null) return;
+
+    if (directoryPath == null) {
+      print("No directory selected.");
+      return;
+    }
+    print("Directory selected: $directoryPath");
 
     final dir = Directory(directoryPath);
-    final List<FileSystemEntity> files = dir.listSync();
-    final supportedExtensions = ['doc', 'docx', 'pdf', 'scrivx'];
+    final List<FileSystemEntity> files = [];
+
+    // Recursively list all files up to 3 levels deep
+    await for (var entity in _listFilesWithDepth(dir, 0)) {
+      if (entity is File) {
+        files.add(entity); // Add valid files to the list
+      }
+    }
 
     setState(() {
+      // Remove duplicates by using a Set based on file paths
+      final Map<String, Book> uniqueBooks =
+          {}; // Keyed by filePath for uniqueness
+      for (var book in books) {
+        uniqueBooks[book.filePath] = book;
+      }
+
+      // Clear the current books list and add only the unique books
+      books.clear();
+      books.addAll(uniqueBooks.values);
+      print(
+          "Removed duplicates, books list now contains ${books.length} unique books.");
+
+      // Import new books, without adding duplicates
+      final supportedExtensions = [
+        'doc',
+        'docx',
+        'pdf',
+        'scrivx'
+      ]; // Main book extensions
+
       for (var file in files) {
         String ext = p.extension(file.path).replaceAll('.', '');
+
         if (supportedExtensions.contains(ext)) {
-          books.add(
-            Book(
+          Book? existingBook =
+              books.firstWhereOrNull((book) => book.filePath == file.path);
+
+          if (existingBook != null) {
+            print(
+                "Book already exists: ${existingBook.title}, preserving cover.");
+          } else {
+            Book newBook = Book(
               title: p.basenameWithoutExtension(file.path),
               filePath: file.path,
               url: '',
-              series: 'None',
-            ),
-          );
-        }
+              coverImagePath: '',
+              series: 'None', // No automatic series assignment
+            );
+            books.add(newBook);
+          }
+        } else {}
       }
+
       _initializeControllers();
       _saveBooksToFile();
     });
   }
 
-  ///////////////////////////////////
-  // Save the series list to a file//
-  ///////////////////////////////////
-  Future<void> _saveSeriesToFile() async {
-    String path = await _getSeriesFilePath();
-    File file = File(path);
-    String jsonString = jsonEncode(seriesList);
-    await file.writeAsString(jsonString);
+// Helper function to get the parent folder of a file (
+  void _updateBookCover(String filePath, String newCoverPath) {
+    setState(() {
+      // Find the book by file path (which should be unique)
+      Book? bookToUpdate =
+          books.firstWhereOrNull((book) => book.filePath == filePath);
+
+      if (bookToUpdate != null) {
+        // Update the book's cover (assuming there's a field for cover)
+        bookToUpdate.coverImagePath = newCoverPath;
+
+        print(
+            "Updated cover for book: ${bookToUpdate.title}, FilePath: ${bookToUpdate.filePath}, New Cover Path: $newCoverPath");
+
+        // Save the updated books list to file (optional)
+        _saveBooksToFile();
+      } else {
+        print("No book found with file path: $filePath");
+      }
+    });
   }
 
-  /////////////////////////////////////
-  // Load the series list from a file//
-  /////////////////////////////////////
-  Future<void> _loadSeriesFromFile() async {
-    String path = await _getSeriesFilePath();
-    File file = File(path);
+// Helper function to recursively list files up to a specified depth (3 levels deep in this case)
+  Stream<FileSystemEntity> _listFilesWithDepth(
+      Directory dir, int depth) async* {
+    if (depth > 3) return; // Stop recursion after 3 levels deep
 
-    if (await file.exists()) {
-      String jsonString = await file.readAsString();
-      List<dynamic> loadedSeriesList = jsonDecode(jsonString);
-
-      setState(() {
-        seriesList = loadedSeriesList.cast<String>()..insert(0, "Show All");
-      });
-      if (kDebugMode) {
-        print('Series list loaded: $seriesList');
-      } // Debugging log
-    } else {
-      if (kDebugMode) {
-        print('Series file does not exist.');
-      } // Debugging log
+    await for (var entity in dir.list(followLinks: false)) {
+      if (entity is Directory) {
+        yield* _listFilesWithDepth(
+            entity, depth + 1); // Recurse into subdirectories
+      } else if (entity is File) {
+        yield entity; // Return the file
+      }
     }
   }
 
@@ -784,10 +890,8 @@ class _BookHubScreenState extends State<BookHubScreen> {
   Future<void> _saveBooksToFile() async {
     String path = await _getFilePath();
     File file = File(path);
-
     List<Map<String, dynamic>> booksJson =
         books.map((book) => book.toJson()).toList();
-
     String jsonString = jsonEncode(booksJson);
     await file.writeAsString(jsonString);
   }
@@ -808,7 +912,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
           Book book = Book.fromJson(bookJson);
 
           // Ensure the book series is valid, fallback to 'None' if invalid
-          if (!seriesList.contains(book.series)) {
+          if (!seriesManager.seriesList.contains(book.series)) {
             book.series = 'None';
           }
 
@@ -836,73 +940,7 @@ class _BookHubScreenState extends State<BookHubScreen> {
     if (selectedSeries == "Show All") {
       return true; // Show all books
     } else {
-      return book.series == selectedSeries; // Filter by selected series
-    }
-  }
-
-  ////////////////////////////////////////////
-  /////Helper Method: Add a New Series////////
-  ////////////////////////////////////////////
-  void _addSeries() {
-    TextEditingController seriesNameController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Add New Series'),
-          content: TextField(
-            controller: seriesNameController,
-            decoration: const InputDecoration(labelText: 'Series Name'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext)
-                    .pop(); // Close dialog without action
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                String newSeries = seriesNameController.text.trim();
-
-                // Ensure that the new series doesn't already exist and is valid
-                if (newSeries.isNotEmpty &&
-                    !seriesList.contains(newSeries) &&
-                    newSeries != 'Show All') {
-                  setState(() {
-                    seriesList.add(newSeries); // Add new series to the list
-                    _saveSeriesToFile(); // Save the updated series list
-                  });
-                }
-
-                Navigator.of(dialogContext).pop(); // Close dialog after adding
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  ////////////////////////////////////////////
-  /////Helper Method: Remove a Series/////////
-  ////////////////////////////////////////////
-  void _removeSeries() {
-    if (selectedSeries != "Show All") {
-      setState(() {
-        for (var book in books) {
-          if (book.series == selectedSeries) {
-            book.series = 'None'; // Reset the series of books in this group
-          }
-        }
-        seriesList.remove(selectedSeries);
-        selectedSeries = 'Show All'; // Ensure selectedSeries is valid
-        _saveBooksToFile(); // Save changes to books
-        _saveSeriesToFile(); // Save changes to series
-      });
+      return book.series == selectedSeries; // Filter by the selected series
     }
   }
 }

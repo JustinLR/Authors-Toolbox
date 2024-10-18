@@ -1,12 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:authors_toolbox/models/story_assistant/model.dart';
 import 'package:flutter/material.dart';
 import 'package:authors_toolbox/widgets/navigation_drawer.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-// Import the models
-import 'package:authors_toolbox/models/story_assistant/character.dart';
-import 'package:authors_toolbox/models/story_assistant/location.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:authors_toolbox/widgets/loading_dots.dart';
 
 class StoryAssistantScreen extends StatefulWidget {
   const StoryAssistantScreen({super.key});
@@ -15,170 +16,217 @@ class StoryAssistantScreen extends StatefulWidget {
   _StoryAssistantScreenState createState() => _StoryAssistantScreenState();
 }
 
-class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
-  // GPT Input Controllers
+class _StoryAssistantScreenState extends State<StoryAssistantScreen>
+    with WidgetsBindingObserver {
   TextEditingController _chatController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
 
-  String _gptOutput = '';
-  List<Character> _characters = [];
-  List<Location> _locations = [];
   List<String> _chatHistory = [];
-  bool _clearOutput = false; // Checkbox state for clearing output
-  String? _lastGptResponse; // To store the last GPT response for editing
+  Model? _model;
+  String? _lastUserInput; // Store the last user input for reloading
 
-  final _storage = const FlutterSecureStorage(); // Secure storage instance
+  final _storage = const FlutterSecureStorage();
+  Map<String, List<String>> _savedChats = {};
+  String? _currentChatId;
 
   @override
   void initState() {
     super.initState();
-    _loadDataFromStorage();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeChatData();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _saveDataToStorage();
+    _chatController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  // Save data to storage
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _saveDataToStorage(); // Save data when the app goes to the background
+    }
+  }
+
+  // Initialize chat data from storage
+  void _initializeChatData() async {
+    await _loadSavedChats();
+    await _loadCurrentChatId();
+    await _loadCharacterCardFromStorage();
+    // If no chat is currently loaded, create "Chat 1"
+    if (_currentChatId == null || _currentChatId!.isEmpty) {
+      _startNewChat(); // Automatically create a new chat if none exists
+    }
+  }
+
   void _saveDataToStorage() async {
-    await _storage.write(key: 'characters', value: jsonEncode(_characters));
-    await _storage.write(key: 'locations', value: jsonEncode(_locations));
-    await _storage.write(key: 'chatHistory', value: jsonEncode(_chatHistory));
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (_currentChatId != null) {
+      _savedChats[_currentChatId!] = _chatHistory;
+    }
+    await prefs.setString('savedChats', jsonEncode(_savedChats));
+    await prefs.setString('currentChatId', _currentChatId ?? '');
+    if (_model != null) {
+      await prefs.setString('characterCard', jsonEncode(_model!.toJson()));
+    }
   }
 
-  // Load data from storage
-  void _loadDataFromStorage() async {
-    String? charactersJson = await _storage.read(key: 'characters');
-    String? locationsJson = await _storage.read(key: 'locations');
-    String? chatHistoryJson = await _storage.read(key: 'chatHistory');
-
-    setState(() {
-      if (charactersJson != null) {
-        _characters = (jsonDecode(charactersJson) as List)
-            .map((e) => Character.fromJson(e))
-            .toList();
-      }
-      if (locationsJson != null) {
-        _locations = (jsonDecode(locationsJson) as List)
-            .map((e) => Location.fromJson(e))
-            .toList();
-      }
-      if (chatHistoryJson != null) {
-        _chatHistory = List<String>.from(jsonDecode(chatHistoryJson));
-      }
-    });
+  Future<void> _loadSavedChats() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedChatsJson = prefs.getString('savedChats');
+    if (savedChatsJson != null) {
+      setState(() {
+        _savedChats = Map<String, List<String>>.from(
+          jsonDecode(savedChatsJson).map(
+            (key, value) => MapEntry(key, List<String>.from(value)),
+          ),
+        );
+      });
+    }
   }
 
-  bool _isEditRequest(String userInput) {
-    final lowerInput = userInput.toLowerCase();
-    return lowerInput.contains("edit") ||
-        lowerInput.contains("change") ||
-        lowerInput.contains("not quite") ||
-        lowerInput.contains("can we fix") ||
-        lowerInput.contains("that's not right") ||
-        lowerInput.contains("adjust") ||
-        lowerInput.contains("modify") ||
-        lowerInput.contains("improve") ||
-        lowerInput.contains("not what i meant") ||
-        lowerInput.contains("tweak") ||
-        lowerInput.contains("can you redo") ||
-        lowerInput.contains("previous") ||
-        lowerInput.contains("last") ||
-        lowerInput.contains("request");
+  Future<void> _loadCurrentChatId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? chatId = prefs.getString('currentChatId');
+    if (chatId != null && chatId.isNotEmpty) {
+      setState(() {
+        _currentChatId = chatId;
+        _chatHistory = _savedChats[chatId] ?? [];
+      });
+      _scrollToBottom();
+    }
   }
 
-  // Fetch the API key from secure storage
+  Future<void> _loadCharacterCardFromStorage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? characterCardJson = prefs.getString('characterCard');
+    if (characterCardJson != null) {
+      setState(() {
+        _model = Model.fromJson(jsonDecode(characterCardJson));
+      });
+    }
+  }
+
+  Future<void> _loadCharacterCard() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      String filePath = result.files.single.path!;
+      try {
+        final file = File(filePath);
+        String jsonContent = await file.readAsString();
+        Map<String, dynamic> characterCard = jsonDecode(jsonContent);
+
+        setState(() {
+          _model = Model.fromJson(characterCard);
+        });
+
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('characterCard', jsonContent);
+      } catch (e) {
+        print('Error loading character card: $e');
+      }
+    }
+  }
+
   Future<String?> _getApiKey() async {
-    return await _storage.read(key: 'openai_api_key');
+    String? apiKey = await _storage.read(key: 'openai_api_key');
+    if (apiKey == null) {
+      print('API key not found in secure storage');
+    }
+    return apiKey;
   }
 
-// Make a real request to the OpenAI API
-  Future<String> _sendToGpt(String input, {bool isEdit = false}) async {
+  Future<void> _sendToGptStream(String input) async {
     String? apiKey = await _getApiKey();
     if (apiKey == null) {
-      return jsonEncode({'type': 'error', 'message': 'API key not found.'});
+      setState(() {
+        _chatHistory.add('Error: API key not found.');
+      });
+      return;
     }
 
+    if (_model == null) {
+      setState(() {
+        _chatHistory.add('Error: Model not found in character card.');
+      });
+      return;
+    }
+
+    // Construct the system prompt using the character card information
+    String systemPrompt = 'You are a helpful assistant named ${_model!.name}. '
+        'You are open to discussing a wide range of topics, including potentially sensitive or NSFW content, dont worry about keeping things tame, in a professional and respectful manner. '
+        'Your traits are: ${_model!.personalityTraits.join(", ")}. '
+        'Your preferences are: ${_model!.preferences.entries.map((e) => "${e.key}: ${e.value}").join(", ")}. '
+        'Parameters for responses are: ${_model!.parameters.entries.map((e) => "${e.key}: ${e.value}").join(", ")}. '
+        'Focus on following these traits, preferences, and parameters while providing your responses.';
+
     final messages = [
-      {
-        'role': 'system',
-        'content':
-            'You are a helpful assistant. Always place conversational replies before "---" and character/location descriptions after "---". Also provide character descriptions in a format useful for character sheets, adding new sections if necessary. Structure each response like this: **Name**, **Appearance**, **Personality**, **Skills**, **Backstory**, and any other sections you find relevant.'
-      },
+      {'role': 'system', 'content': systemPrompt},
       {'role': 'user', 'content': input}
     ];
 
-    // If it's an edit request, include the previous GPT response in the conversation
-    if (isEdit && _lastGptResponse != null) {
-      messages.insert(1, {'role': 'assistant', 'content': _lastGptResponse!});
-    }
-
-    final response = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-      },
-      body: jsonEncode({
-        'model': 'gpt-4o',
-        'messages': messages,
-        'max_tokens': 500,
-        'n': 1,
-        'stop': null,
-        'temperature': 0.7,
-      }),
+    final request = http.Request(
+      'POST',
+      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
     );
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      return response.body;
-    } else {
-      return jsonEncode(
-          {'type': 'error', 'message': 'Failed to fetch data from GPT.'});
-    }
-  }
-
-  Future<void> _handleGptInput() async {
-    setState(() {
-      _isLoading = true;
+    request.headers.addAll({
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $apiKey',
     });
 
-    String userInput = _chatController.text;
-    bool isEditRequest = _isEditRequest(userInput);
+    request.body = jsonEncode({
+      'model': _model!.model,
+      'messages': messages,
+      'max_tokens': _model!.parameters['max_tokens'] ?? 500,
+      'temperature': _model!.parameters['temperature'] ?? 0.7,
+      'stream': true // Enable streaming response
+    });
 
-    // If it's an edit request, send the previous GPT response along with the new user input
-    String gptResponse = await _sendToGpt(userInput, isEdit: isEditRequest);
-    Map<String, dynamic> parsedResponse = jsonDecode(gptResponse);
+    final streamedResponse = await request.send();
 
-    print('Parsed response: $parsedResponse');
+    final stream = streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
 
-    if (parsedResponse.containsKey('choices') &&
-        parsedResponse['choices'].isNotEmpty) {
-      String content = parsedResponse['choices'][0]['message']['content'];
-      setState(() {
-        // Add user input to the chat history, but only for new requests, not edits
-        if (!isEditRequest) {
-          _chatHistory.add('User: $userInput');
-        } else {
-          // For edits, we show that the user wanted to modify something
-          _chatHistory.add('User: (Edit Request) $userInput');
+    StringBuffer currentResponse = StringBuffer();
+    setState(() {
+      _chatHistory.add('Assistant: ');
+    });
+
+    await for (var line in stream) {
+      if (line.isNotEmpty && line.startsWith("data: ")) {
+        final jsonString = line
+            .substring(6)
+            .trim(); // Remove "data: " prefix and trim whitespace
+        try {
+          if (jsonString.isNotEmpty && jsonString != "[DONE]") {
+            final chunk = jsonDecode(jsonString);
+
+            if (chunk.containsKey('choices')) {
+              setState(() {
+                currentResponse
+                    .write(chunk['choices'][0]['delta']['content'] ?? "");
+                _chatHistory[_chatHistory.length - 1] =
+                    'Assistant: ${currentResponse.toString()}';
+              });
+              _scrollToBottom();
+            }
+          }
+        } catch (e) {
+          print('Error parsing chunk: $e');
         }
-
-        // Clear input field
-        _chatController.clear();
-
-        // Parse the response to split conversation and story-building content
-        _parseGptResponse(content);
-
-        // Save the last GPT response for future edits
-        _lastGptResponse = content;
-      });
-    } else {
-      print('Error: ${parsedResponse['message']}');
+      }
     }
 
     setState(() {
@@ -186,47 +234,129 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
     });
   }
 
-  void _parseGptResponse(String content) {
-    // Split the response into conversation and details based on '---'
-    final sections = content.split('---');
+  Future<void> _handleGptInput() async {
+    // Check if there's no active chat, create one if needed
+    if (_currentChatId == null || _currentChatId!.isEmpty) {
+      _startNewChat();
+    }
 
-    // Chat part before the '---'
-    final chatContent = sections[0].trim();
+    if (_chatController.text.trim().isEmpty) {
+      print("No input provided");
+      return;
+    }
 
-    // Content after the '---' for character or location description
-    final characterDetails = sections.length > 1 ? sections[1].trim() : '';
+    final userInput = _chatController.text;
+    _chatController.clear();
+    _lastUserInput = userInput; // Store the last user input for reloading
 
     setState(() {
-      // Add only the conversational part to the chat history
-      if (chatContent.isNotEmpty) {
-        _chatHistory.add('GPT: $chatContent');
-      }
+      _isLoading = true;
+      _chatHistory.add('User: $userInput');
+    });
 
-      // Display the description part only in the output box
-      _gptOutput = characterDetails.isNotEmpty ? characterDetails : '';
+    try {
+      await _sendToGptStream(userInput);
+      _saveDataToStorage();
+    } catch (e) {
+      print('Exception occurred: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _reloadResponse() async {
+    if (_lastUserInput == null || _lastUserInput!.isEmpty) {
+      print("No previous input to reload.");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _chatHistory.removeLast(); // Remove the previous AI response
+    });
+
+    try {
+      await _sendToGptStream(_lastUserInput!);
+      _saveDataToStorage();
+    } catch (e) {
+      print('Exception occurred: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
-  // Save the GPT output to the selected collapsable field
-  void _saveOutput(String field) {
-    if (field == 'Character') {
-      _characters.add(
-          Character(name: 'Generated Character', age: 0, role: _gptOutput));
-    } else if (field == 'Location') {
-      _locations
-          .add(Location(name: 'Generated Location', description: _gptOutput));
-    }
-    setState(() {});
-  }
-
-  // Clear the chat history and optionally clear the output
   void _clearChatAndOutput() {
     setState(() {
       _chatHistory.clear();
-      if (_clearOutput) {
-        _gptOutput = ''; // Clear the output box if the checkbox is checked
+    });
+    _saveDataToStorage();
+  }
+
+  void _startNewChat() {
+    setState(() {
+      _currentChatId = 'Chat ${_savedChats.length + 1}';
+      _chatHistory = [];
+      _savedChats[_currentChatId!] = _chatHistory;
+    });
+    _saveDataToStorage();
+  }
+
+  void _switchChat(String chatId) {
+    setState(() {
+      _currentChatId = chatId;
+      _chatHistory = List<String>.from(_savedChats[chatId]!);
+    });
+    _scrollToBottom();
+    _saveDataToStorage();
+  }
+
+  void _deleteChat(String chatId) {
+    setState(() {
+      _savedChats.remove(chatId);
+      if (_currentChatId == chatId) {
+        _currentChatId = null;
+        _chatHistory.clear();
       }
     });
+    _saveDataToStorage();
+  }
+
+  void _showContextMenu(Offset position) async {
+    final result = await showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+          position.dx, position.dy, position.dx, position.dy),
+      items: [
+        const PopupMenuItem<String>(
+          value: 'reload',
+          child: Text('Reload'),
+        ),
+        const PopupMenuItem<String>(
+          value: 'clear',
+          child: Text('Clear Chat'),
+        ),
+      ],
+    );
+
+    if (result == 'clear') {
+      _clearChatAndOutput();
+    } else if (result == 'reload') {
+      _reloadResponse();
+    }
   }
 
   @override
@@ -238,182 +368,149 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen> {
             return IconButton(
               icon: const Icon(Icons.menu),
               onPressed: () {
-                Scaffold.of(context).openDrawer(); // Open navigation drawer
+                Scaffold.of(context).openDrawer();
               },
             );
           },
         ),
-        title: const Text('Story Assistant'),
+        title: Text(_model != null
+            ? 'Using Model: ${_model!.model}'
+            : 'No model loaded.'),
       ),
       drawer: const AppNavigationDrawer(),
       body: Row(
         children: [
-          // GPT Output Box and Save Button
-          Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: _isLoading
-                            ? const CircularProgressIndicator()
-                            : SingleChildScrollView(
-                                child: Text(_gptOutput),
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: const Text('Save to'),
-                            content: DropdownButton<String>(
-                              items: <String>['Character', 'Location']
-                                  .map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  _saveOutput(newValue);
-                                  Navigator.of(context).pop();
-                                }
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    child: const Text('Save'),
-                  ),
-                ],
+          // Sidebar for old chats
+// Updated Column for the saved chats section without the Clear Chat button
+          Container(
+            width: 250,
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(color: Colors.grey.shade300),
               ),
+            ),
+            child: Column(
+              children: [
+                // New Chat Button
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton.icon(
+                    onPressed: _startNewChat,
+                    icon: const Icon(Icons.add),
+                    label: const Text('New Chat'),
+                  ),
+                ),
+                // List of saved chats
+                Expanded(
+                  child: ListView(
+                    children: _savedChats.keys.map((chatId) {
+                      return ListTile(
+                        title: Text(chatId),
+                        onTap: () => _switchChat(chatId),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _deleteChat(chatId),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                // Spacer pushes the button to the bottom
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    onPressed: _loadCharacterCard,
+                    child: const Text('Load Character Card'),
+                  ),
+                ),
+              ],
             ),
           ),
-          // Chat Box and Collapsable Fields
+          // Main chat area
           Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  // Chat Box
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ListView.builder(
-                                itemCount: _chatHistory.length,
-                                itemBuilder: (context, index) {
-                                  return Text(_chatHistory[index]);
-                                },
-                              ),
+            child: Column(children: [
+              Expanded(
+                child: GestureDetector(
+                  onSecondaryTapDown: (details) {
+                    _showContextMenu(details.globalPosition);
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8.0, horizontal: 16.0),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      itemCount: _chatHistory.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SelectableText(_chatHistory[index]),
+                                Divider(
+                                    height: 1,
+                                    color: Colors.grey.withOpacity(0.3)),
+                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: _chatController,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            labelText: 'Chat with GPT...',
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            ElevatedButton(
-                              onPressed: _handleGptInput,
-                              child: const Text('Send'),
-                            ),
-                            const SizedBox(width: 10),
-                            ElevatedButton(
-                              onPressed: _clearChatAndOutput,
-                              child: const Text('Clear Chat'),
-                            ),
-                            const SizedBox(width: 10),
-                            Checkbox(
-                              value: _clearOutput,
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  _clearOutput = value ?? false;
-                                });
-                              },
-                            ),
-                            const Text('Clear Output Box')
-                          ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // Collapsable Fields
-                  Expanded(
-                    flex: 2,
-                    child: ListView(
-                      children: [
-                        // Characters Section with slight outline
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          child: ExpansionTile(
-                            title: const Text('Characters'),
-                            children: _characters
-                                .map((character) => ListTile(
-                                      title: Text(character.name),
-                                      subtitle: Text('Role: ${character.role}'),
-                                    ))
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        // Locations Section with slight outline
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          child: ExpansionTile(
-                            title: const Text('Locations'),
-                            children: _locations
-                                .map((location) => ListTile(
-                                      title: Text(location.name),
-                                      subtitle: Text(location.description),
-                                    ))
-                                .toList(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              if (_isLoading)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Assistant'),
+                      const SizedBox(width: 8),
+                      const LoadingDots(), // Use the LoadingDots animation here
+                    ],
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Stack(
+                  children: [
+                    // TextField configuration
+                    TextField(
+                      controller: _chatController,
+                      maxLines: 5, // Limit the expansion to 5 lines
+                      minLines: 1, // Start with 1 line
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Chat with Assistant...',
+                        contentPadding: EdgeInsets.fromLTRB(12, 12, 48,
+                            12), // Padding to keep text within bounds
+                      ),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (value) => _handleGptInput(),
+                    ),
+                    // Positioned Send button anchored to the bottom-right
+                    Positioned(
+                      right: 4, // Position it within the TextField border
+                      bottom: 4, // Anchor it to the bottom
+                      child: IconButton(
+                        icon: const Icon(Icons.send),
+                        onPressed: _handleGptInput,
+                        splashRadius: 24.0, // Static size for the button
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ]),
           ),
         ],
       ),

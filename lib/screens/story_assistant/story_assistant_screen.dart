@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:authors_toolbox/widgets/loading_dots.dart';
+import 'package:flutter/services.dart';
 
 class StoryAssistantScreen extends StatefulWidget {
   const StoryAssistantScreen({super.key});
@@ -483,19 +484,44 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
                 padding: const EdgeInsets.all(16.0),
                 child: Stack(
                   children: [
-                    // TextField configuration
-                    TextField(
-                      controller: _chatController,
-                      maxLines: 5, // Limit the expansion to 5 lines
-                      minLines: 1, // Start with 1 line
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: 'Chat with Assistant...',
-                        contentPadding: EdgeInsets.fromLTRB(12, 12, 48,
-                            12), // Padding to keep text within bounds
+                    // Wrap the TextField with a Focus widget to handle key events
+                    Focus(
+                      onKeyEvent: (FocusNode node, KeyEvent event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.enter) {
+                            // Use HardwareKeyboard.instance.isShiftPressed to check if Shift is pressed
+                            if (HardwareKeyboard.instance.isShiftPressed) {
+                              // If Shift + Enter is pressed, add a new line to the input
+                              final currentText = _chatController.text;
+                              final newText = '$currentText\n';
+                              _chatController.text = newText;
+                              _chatController.selection =
+                                  TextSelection.fromPosition(
+                                TextPosition(
+                                    offset: _chatController.text.length),
+                              );
+                              return KeyEventResult.handled;
+                            } else {
+                              // If Enter alone is pressed, submit the input
+                              _handleGptInput();
+                              return KeyEventResult.handled;
+                            }
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: TextField(
+                        controller: _chatController,
+                        maxLines: 5, // Limit the expansion to 5 lines
+                        minLines: 1, // Start with 1 line
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Chat with Assistant...',
+                          contentPadding: EdgeInsets.fromLTRB(12, 12, 48,
+                              12), // Padding to keep text within bounds
+                        ),
+                        textInputAction: TextInputAction.newline,
                       ),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (value) => _handleGptInput(),
                     ),
                     // Positioned Send button anchored to the bottom-right
                     Positioned(

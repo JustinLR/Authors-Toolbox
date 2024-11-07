@@ -1,26 +1,28 @@
 {
   "files.exclude": {
-      "android/": true,
-      "ios/": true,
-      "web/": true,
-      "windows/": true,
-      "linux/": true,
-      "macos/": true,
-      "test/": true,
-      "**/.dart_tool": true,
-      "**/.idea": true,
-      "**/.flutter-plugins": true,
-      "**/.flutter-plugins-dependencies": true,
-      "**/.metadata": true,
-      "**/authors_toolbox.iml": true,
-      "**/pubspec.lock": true,
-      "analysis_options.yaml": true,
-      "build/": true,
-      "README.md": true,
-      ".gitignore": true
+    "android/": true,
+    "ios/": true,
+    "web/": true,
+    "windows/": true,
+    "linux/": true,
+    "macos/": true,
+    "test/": true,
+    "**/.dart_tool": true,
+    "**/.idea": true,
+    "**/.flutter-plugins": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/.metadata": true,
+    "**/authors_toolbox.iml": true,
+    "**/pubspec.lock": true,
+    "analysis_options.yaml": true,
+    "build/": true,
+    "README.md": true,
+    ".gitignore": true
   },
   "[dart]": {
-      "editor.defaultFormatter": "Dart-Code.dart-code",
-      "editor.formatOnSave": true
-  }
+    "editor.defaultFormatter": "Dart-Code.dart-code",
+    "editor.formatOnSave": true
+  },
+  "editor.formatOnPaste": true,
+  "editor.formatOnSave": true
 }

@@ -1,50 +1,33 @@
-// lib/model/model.dart
 class Model {
-  final String name;
-  final String description;
-  final List<String> personalityTraits;
-  final Map<String, String> preferences;
   final String model;
-  final Map<String, dynamic> parameters;
+  final String name;
   final String systemPrompt;
+  final Map<String, double> parameters;
 
   Model({
-    required this.name,
-    required this.description,
-    required this.personalityTraits,
-    required this.preferences,
     required this.model,
-    required this.parameters,
+    required this.name,
     required this.systemPrompt,
+    required this.parameters,
   });
 
-  // Factory method to create a Model instance from JSON
   factory Model.fromJson(Map<String, dynamic> json) {
     return Model(
-      name: json['name'] as String? ?? 'Unknown Name',
-      description:
-          json['description'] as String? ?? 'No description available.',
-      personalityTraits: List<String>.from(json['personality']['traits'] ?? []),
-      preferences: Map<String, String>.from(json['preferences'] ?? {}),
-      model: json['model'] as String? ?? 'default-model',
-      parameters: Map<String, dynamic>.from(json['parameters'] ?? {}),
-      systemPrompt:
-          json['system_prompt'] as String? ?? 'No system prompt provided.',
+      model: json['model'] as String,
+      name: json['name'] as String,
+      systemPrompt: json['system_prompt'] as String,
+      parameters: (json['parameters'] as Map<String, dynamic>).map(
+        (key, value) => MapEntry(key, (value as num).toDouble()),
+      ),
     );
   }
 
-  // Method to convert Model instance to JSON
   Map<String, dynamic> toJson() {
     return {
-      'name': name,
-      'description': description,
-      'personality': {
-        'traits': personalityTraits,
-      },
-      'preferences': preferences,
       'model': model,
-      'parameters': parameters,
+      'name': name,
       'system_prompt': systemPrompt,
+      'parameters': parameters,
     };
   }
 }

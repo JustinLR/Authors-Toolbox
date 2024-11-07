@@ -1,5 +1,5 @@
 {
-    "files.exclude": {
+  "files.exclude": {
       "android/": true,
       "ios/": true,
       "web/": true,
@@ -14,10 +14,13 @@
       "**/.metadata": true,
       "**/authors_toolbox.iml": true,
       "**/pubspec.lock": true,
-      "analysis_options.yaml/": true,
-      "build/" : true,
-      "README.md/" : true,
-      ".gitignore" : true
-    }
+      "analysis_options.yaml": true,
+      "build/": true,
+      "README.md": true,
+      ".gitignore": true
+  },
+  "[dart]": {
+      "editor.defaultFormatter": "Dart-Code.dart-code",
+      "editor.formatOnSave": true
   }
-  
+}

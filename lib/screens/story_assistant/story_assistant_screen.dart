@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:authors_toolbox/models/story_assistant/model.dart';
@@ -22,11 +23,11 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
   TextEditingController _chatController = TextEditingController();
   ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
+  Completer<void>? _cancelCompleter;
 
   List<String> _chatHistory = [];
   Model? _model;
-  String? _lastUserInput; // Store the last user input for reloading
-
+  String? _lastUserInput;
   final _storage = const FlutterSecureStorage();
   Map<String, List<String>> _savedChats = {};
   String? _currentChatId;
@@ -49,22 +50,31 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
+    if (state == AppLifecycleState.resumed) {
+      // Resume animations or timers if needed
+    } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _saveDataToStorage(); // Save data when the app goes to the background
+      _saveDataToStorage();
+      // Optionally cancel ongoing animations here
     }
   }
 
-  // Initialize chat data from storage
+  ////////////////////////
+  // Initialize Chat Data
+  ////////////////////////
+
   void _initializeChatData() async {
     await _loadSavedChats();
     await _loadCurrentChatId();
     await _loadCharacterCardFromStorage();
-    // If no chat is currently loaded, create "Chat 1"
     if (_currentChatId == null || _currentChatId!.isEmpty) {
-      _startNewChat(); // Automatically create a new chat if none exists
+      _startNewChat();
     }
   }
+
+  ////////////////////////
+  // Save Data to Storage
+  ////////////////////////
 
   void _saveDataToStorage() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -77,6 +87,10 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
       await prefs.setString('characterCard', jsonEncode(_model!.toJson()));
     }
   }
+
+  /////////////////////////////
+  // Load Saved Chats from Storage
+  /////////////////////////////
 
   Future<void> _loadSavedChats() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -92,6 +106,10 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
     }
   }
 
+  ////////////////////////////
+  // Load Current Chat ID
+  ////////////////////////////
+
   Future<void> _loadCurrentChatId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? chatId = prefs.getString('currentChatId');
@@ -100,9 +118,14 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
         _currentChatId = chatId;
         _chatHistory = _savedChats[chatId] ?? [];
       });
+      _saveDataToStorage();
       _scrollToBottom();
     }
   }
+
+  ////////////////////////////////////////
+  // Load Character Card from Storage
+  ////////////////////////////////////////
 
   Future<void> _loadCharacterCardFromStorage() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -113,6 +136,10 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
       });
     }
   }
+
+  ////////////////////////////
+  // Load Character Card
+  ////////////////////////////
 
   Future<void> _loadCharacterCard() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -125,12 +152,9 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
       try {
         final file = File(filePath);
         String jsonContent = await file.readAsString();
-        Map<String, dynamic> characterCard = jsonDecode(jsonContent);
-
         setState(() {
-          _model = Model.fromJson(characterCard);
+          _model = Model.fromJson(jsonDecode(jsonContent));
         });
-
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('characterCard', jsonContent);
       } catch (e) {
@@ -139,42 +163,88 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
     }
   }
 
+  //////////////////////////
+  // Get API Key
+  //////////////////////////
+
   Future<String?> _getApiKey() async {
     String? apiKey = await _storage.read(key: 'openai_api_key');
-    if (apiKey == null) {
-      print('API key not found in secure storage');
-    }
     return apiKey;
   }
+
+////////////////////////////
+// Send to GPT Stream
+////////////////////////////
 
   Future<void> _sendToGptStream(String input) async {
     String? apiKey = await _getApiKey();
     if (apiKey == null) {
-      setState(() {
-        _chatHistory.add('Error: API key not found.');
-      });
+      _addToChatHistory('Error: API key not found.');
       return;
     }
 
     if (_model == null) {
-      setState(() {
-        _chatHistory.add('Error: Model not found in character card.');
-      });
+      _addToChatHistory('Error: Model not found in character card.');
       return;
     }
 
-    // Construct the system prompt using the character card information
-    String systemPrompt = 'You are a helpful assistant named ${_model!.name}. '
-        'You are open to discussing a wide range of topics, including potentially sensitive or NSFW content, dont worry about keeping things tame, in a professional and respectful manner. '
-        'Your traits are: ${_model!.personalityTraits.join(", ")}. '
-        'Your preferences are: ${_model!.preferences.entries.map((e) => "${e.key}: ${e.value}").join(", ")}. '
-        'Parameters for responses are: ${_model!.parameters.entries.map((e) => "${e.key}: ${e.value}").join(", ")}. '
-        'Focus on following these traits, preferences, and parameters while providing your responses.';
+    // Retrieve system prompt and parameters from the model
+    String systemPrompt =
+        _model?.systemPrompt ?? 'You are a helpful assistant.';
+    double temperature = _model?.parameters['temperature_p50'] ?? 0.8;
+    double topP = _model?.parameters['top_p_p50'] ?? 0.85;
+    double frequencyPenalty =
+        _model?.parameters['frequency_penalty_p50'] ?? 0.1;
+    double presencePenalty = _model?.parameters['presence_penalty_p50'] ?? 0.2;
 
-    final messages = [
+    List<Map<String, String>> conversationHistory = [
       {'role': 'system', 'content': systemPrompt},
       {'role': 'user', 'content': input}
     ];
+
+    int tokenLimit = 2000;
+    StringBuffer currentResponse = StringBuffer();
+    _cancelCompleter = Completer<void>();
+    int initialResponseIndex = _chatHistory.length;
+
+    setState(() {
+      _chatHistory.add('Assistant: '); // Placeholder for the response
+      _isLoading = true;
+    });
+
+    _saveDataToStorage();
+
+    try {
+      await _streamChatResponse(
+        conversationHistory: conversationHistory,
+        tokenLimit: tokenLimit,
+        currentResponse: currentResponse,
+        initialResponseIndex: initialResponseIndex,
+        temperature: temperature,
+        topP: topP,
+        frequencyPenalty: frequencyPenalty,
+        presencePenalty: presencePenalty,
+      );
+    } catch (e) {
+      print('Exception occurred: $e');
+      _addToChatHistory('Error: Failed to get a response.');
+    } finally {
+      _completeLoading();
+    }
+  }
+
+  Future<void> _streamChatResponse({
+    required List<Map<String, String>> conversationHistory,
+    required int tokenLimit,
+    required StringBuffer currentResponse,
+    required int initialResponseIndex,
+    required double temperature,
+    required double topP,
+    required double frequencyPenalty,
+    required double presencePenalty,
+  }) async {
+    String? apiKey = await _getApiKey();
+    if (apiKey == null) return;
 
     final request = http.Request(
       'POST',
@@ -188,55 +258,103 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
 
     request.body = jsonEncode({
       'model': _model!.model,
-      'messages': messages,
-      'max_tokens': _model!.parameters['max_tokens'] ?? 500,
-      'temperature': _model!.parameters['temperature'] ?? 0.7,
-      'stream': true // Enable streaming response
+      'messages': conversationHistory,
+      'max_tokens': tokenLimit,
+      'temperature': temperature,
+      'top_p': topP,
+      'frequency_penalty': frequencyPenalty,
+      'presence_penalty': presencePenalty,
+      'stream': true,
     });
 
     final streamedResponse = await request.send();
-
     final stream = streamedResponse.stream
         .transform(utf8.decoder)
         .transform(const LineSplitter());
 
-    StringBuffer currentResponse = StringBuffer();
-    setState(() {
-      _chatHistory.add('Assistant: ');
-    });
+    try {
+      await for (var line in stream) {
+        if (_cancelCompleter!.isCompleted) {
+          break;
+        }
 
-    await for (var line in stream) {
-      if (line.isNotEmpty && line.startsWith("data: ")) {
-        final jsonString = line
-            .substring(6)
-            .trim(); // Remove "data: " prefix and trim whitespace
-        try {
-          if (jsonString.isNotEmpty && jsonString != "[DONE]") {
-            final chunk = jsonDecode(jsonString);
+        if (_isValidLine(line)) {
+          _processResponseChunk(line, currentResponse, initialResponseIndex);
+        }
+      }
 
-            if (chunk.containsKey('choices')) {
-              setState(() {
-                currentResponse
-                    .write(chunk['choices'][0]['delta']['content'] ?? "");
-                _chatHistory[_chatHistory.length - 1] =
-                    'Assistant: ${currentResponse.toString()}';
-              });
-              _scrollToBottom();
-            }
-          }
-        } catch (e) {
-          print('Error parsing chunk: $e');
+      // Add the finalized response to conversation history
+      conversationHistory.add({
+        'role': 'assistant',
+        'content': currentResponse.toString(),
+      });
+      _finalizeResponse(initialResponseIndex);
+    } catch (e) {
+      print('Error processing the response stream: $e');
+    }
+  }
+
+  void _processResponseChunk(
+      String line, StringBuffer currentResponse, int initialResponseIndex) {
+    final jsonString = _extractData(line);
+    if (jsonString.isNotEmpty && jsonString != "[DONE]") {
+      final chunk = jsonDecode(jsonString);
+      if (chunk.containsKey('choices')) {
+        // Extract the delta content from the response
+        String deltaContent = chunk['choices'][0]['delta']['content'] ?? "";
+        if (deltaContent.isNotEmpty) {
+          currentResponse.write(deltaContent);
+
+          // Update chat history without resetting previous content
+          setState(() {
+            _chatHistory[initialResponseIndex] =
+                'Assistant: ${currentResponse.toString()}';
+          });
+
+          _saveDataToStorage();
+          _scrollToBottom();
         }
       }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
+//////////////////////////////////
+// Finalize the GPT Response
+//////////////////////////////////
+
+  void _finalizeResponse(int index) {
+    setState(() {
+      _isLoading = false;
+      // Ensure the final state of the response is saved properly
+      _chatHistory[index] = _chatHistory[index].trim();
+    });
+    _saveDataToStorage();
+  }
+
+  /////////////////////////////
+  // Helper Methods
+  /////////////////////////////
+
+  void _addToChatHistory(String message) {
+    setState(() {
+      _chatHistory.add(message);
+    });
+    _saveDataToStorage(); // Ensure saving after the response is finalized
+  }
+
+  bool _isValidLine(String line) {
+    return line.isNotEmpty && line.startsWith("data: ");
+  }
+
+  String _extractData(String line) {
+    return line.substring(6).trim();
+  }
+
+  //////////////////////////////
+  // Handle GPT Input
+  //////////////////////////////
+
   Future<void> _handleGptInput() async {
-    // Check if there's no active chat, create one if needed
     if (_currentChatId == null || _currentChatId!.isEmpty) {
       _startNewChat();
     }
@@ -246,57 +364,78 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
       return;
     }
 
-    final userInput = _chatController.text;
+    // Preprocess the user's input to add extra line breaks between paragraphs
+    final userInput = _addExtraLineBreaks(_chatController.text);
     _chatController.clear();
-    _lastUserInput = userInput; // Store the last user input for reloading
-
+    _lastUserInput = userInput;
     setState(() {
       _isLoading = true;
       _chatHistory.add('User: $userInput');
     });
-
+    _saveDataToStorage();
     try {
       await _sendToGptStream(userInput);
       _saveDataToStorage();
     } catch (e) {
       print('Exception occurred: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      _completeLoading();
     }
   }
 
-  Future<void> _reloadResponse() async {
-    if (_lastUserInput == null || _lastUserInput!.isEmpty) {
-      print("No previous input to reload.");
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _chatHistory.removeLast(); // Remove the previous AI response
+// Helper function to add extra line breaks between paragraphs
+  String _addExtraLineBreaks(String text) {
+    // This regular expression matches each new line followed by non-empty content
+    // to insert an extra line break for clearer paragraph spacing
+    return text.replaceAllMapped(RegExp(r'(\n)([^\n])'), (match) {
+      return '${match.group(1)}\n${match.group(2)}';
     });
+  }
 
-    try {
-      await _sendToGptStream(_lastUserInput!);
-      _saveDataToStorage();
-    } catch (e) {
-      print('Exception occurred: $e');
-    } finally {
+  //////////////////////////////
+  // Complete Loading
+  //////////////////////////////
+
+  void _completeLoading() {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  //////////////////////////////
+  // Stop GPT Response
+  //////////////////////////////
+
+  void _stopGptResponse() {
+    if (_cancelCompleter != null && !_cancelCompleter!.isCompleted) {
+      _cancelCompleter!.complete();
       setState(() {
         _isLoading = false;
       });
     }
   }
+
+  ////////////////////////////////////
+  // Chat Management Methods
+  ////////////////////////////////////
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      if (_scrollController.hasClients) {
+        final position = _scrollController.position.maxScrollExtent;
+        if (position >= 0) {
+          _scrollController
+              .animateTo(
+            position,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          )
+              .catchError((e) {
+            // Catch animation errors to avoid crashing the app
+            print('Scroll animation error: $e');
+          });
+        }
+      }
     });
   }
 
@@ -336,6 +475,10 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
     _saveDataToStorage();
   }
 
+  ////////////////////////////////
+  // Show Context Menu
+  ////////////////////////////////
+
   void _showContextMenu(Offset position) async {
     final result = await showMenu(
       context: context,
@@ -350,6 +493,10 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
           value: 'clear',
           child: Text('Clear Chat'),
         ),
+        const PopupMenuItem<String>(
+          value: 'selectAll',
+          child: Text('Select All'),
+        ),
       ],
     );
 
@@ -357,8 +504,55 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
       _clearChatAndOutput();
     } else if (result == 'reload') {
       _reloadResponse();
+    } else if (result == 'selectAll') {
+      _selectAllAiText();
     }
   }
+
+  ////////////////////////
+  // Ai Response
+  ////////////////////////
+  void _selectAllAiText() {
+    // This will copy all the Assistant responses to the clipboard
+    String allAiText = _chatHistory
+        .where((message) => message.startsWith('Assistant:'))
+        .map((message) => message.replaceFirst('Assistant: ', ''))
+        .join('\n');
+
+    Clipboard.setData(ClipboardData(text: allAiText));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('AI Responses Copied to Clipboard')),
+    );
+  }
+
+  ////////////////////////
+  // Reload Response
+  ////////////////////////
+
+  Future<void> _reloadResponse() async {
+    if (_lastUserInput == null || _lastUserInput!.isEmpty) {
+      print("No previous input to reload.");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _chatHistory.removeLast();
+    });
+
+    try {
+      await _sendToGptStream(_lastUserInput!);
+      _saveDataToStorage();
+    } catch (e) {
+      print('Exception occurred: $e');
+    } finally {
+      _completeLoading();
+    }
+  }
+
+  /////////////////////////////
+  // Build Method
+  /////////////////////////////
 
   @override
   Widget build(BuildContext context) {
@@ -381,162 +575,258 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
       drawer: const AppNavigationDrawer(),
       body: Row(
         children: [
-          // Sidebar for old chats
-// Updated Column for the saved chats section without the Clear Chat button
-          Container(
-            width: 250,
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
-            child: Column(
-              children: [
-                // New Chat Button
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton.icon(
-                    onPressed: _startNewChat,
-                    icon: const Icon(Icons.add),
-                    label: const Text('New Chat'),
-                  ),
-                ),
-                // List of saved chats
-                Expanded(
-                  child: ListView(
-                    children: _savedChats.keys.map((chatId) {
-                      return ListTile(
-                        title: Text(chatId),
-                        onTap: () => _switchChat(chatId),
-                        trailing: IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteChat(chatId),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                // Spacer pushes the button to the bottom
-                const Spacer(),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: _loadCharacterCard,
-                    child: const Text('Load Character Card'),
-                  ),
-                ),
-              ],
+          _buildChatSidebar(),
+          _buildChatMainArea(),
+        ],
+      ),
+    );
+  }
+
+  ///////////////////////////////
+  // Build Chat Sidebar
+  ///////////////////////////////
+
+  Widget _buildChatSidebar() {
+    return Container(
+      width: 250,
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton.icon(
+              onPressed: _startNewChat,
+              icon: const Icon(Icons.add),
+              label: const Text('New Chat'),
             ),
           ),
-          // Main chat area
           Expanded(
-            child: Column(children: [
-              Expanded(
-                child: GestureDetector(
-                  onSecondaryTapDown: (details) {
-                    _showContextMenu(details.globalPosition);
+            child: ListView(
+              children: _savedChats.keys.map((chatId) {
+                return ListTile(
+                  title: Text(chatId),
+                  onTap: () => _switchChat(chatId),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteChat(chatId),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton(
+              onPressed: _loadCharacterCard,
+              child: const Text('Load Character Card'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ////////////////////////////
+  // Build Chat Main Area
+  ////////////////////////////
+
+  Widget _buildChatMainArea() {
+    return Expanded(
+      child: Column(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onSecondaryTapDown: (details) {
+                _showContextMenu(details.globalPosition);
+              },
+              child: Container(
+                margin: const EdgeInsets.all(16.0),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: _chatHistory.length,
+                  itemBuilder: (context, index) {
+                    String message = _chatHistory[index];
+                    bool isUser = message.startsWith('User:');
+                    return isUser
+                        ? _buildUserMessage(message.replaceFirst('User: ', ''))
+                        : _buildAiResponseBlock(
+                            message.replaceFirst('Assistant: ', ''));
                   },
-                  child: Container(
-                    margin: const EdgeInsets.all(16.0),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 8.0, horizontal: 16.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      itemCount: _chatHistory.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SelectableText(_chatHistory[index]),
-                                Divider(
-                                    height: 1,
-                                    color: Colors.grey.withOpacity(0.3)),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
                 ),
               ),
-              if (_isLoading)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Assistant'),
-                      const SizedBox(width: 8),
-                      const LoadingDots(), // Use the LoadingDots animation here
-                    ],
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Stack(
-                  children: [
-                    // Wrap the TextField with a Focus widget to handle key events
-                    Focus(
-                      onKeyEvent: (FocusNode node, KeyEvent event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.enter) {
-                            // Use HardwareKeyboard.instance.isShiftPressed to check if Shift is pressed
-                            if (HardwareKeyboard.instance.isShiftPressed) {
-                              // If Shift + Enter is pressed, add a new line to the input
-                              final currentText = _chatController.text;
-                              final newText = '$currentText\n';
-                              _chatController.text = newText;
-                              _chatController.selection =
-                                  TextSelection.fromPosition(
-                                TextPosition(
-                                    offset: _chatController.text.length),
-                              );
-                              return KeyEventResult.handled;
-                            } else {
-                              // If Enter alone is pressed, submit the input
-                              _handleGptInput();
-                              return KeyEventResult.handled;
-                            }
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: TextField(
-                        controller: _chatController,
-                        maxLines: 5, // Limit the expansion to 5 lines
-                        minLines: 1, // Start with 1 line
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Chat with Assistant...',
-                          contentPadding: EdgeInsets.fromLTRB(12, 12, 48,
-                              12), // Padding to keep text within bounds
-                        ),
-                        textInputAction: TextInputAction.newline,
-                      ),
-                    ),
-                    // Positioned Send button anchored to the bottom-right
-                    Positioned(
-                      right: 4, // Position it within the TextField border
-                      bottom: 4, // Anchor it to the bottom
-                      child: IconButton(
-                        icon: const Icon(Icons.send),
-                        onPressed: _handleGptInput,
-                        splashRadius: 24.0, // Static size for the button
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+          ),
+          if (_isLoading) _buildLoadingIndicator(),
+          _buildUserInputArea(),
+        ],
+      ),
+    );
+  }
+////////////////////////////
+// Build User Message
+////////////////////////////
+
+  Widget _buildUserMessage(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SelectableText(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
-            ]),
+            ),
+            Divider(
+              height: 1,
+              color: Colors.grey.withOpacity(0.3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+////////////////////////////
+// Build AI Response Block
+////////////////////////////
+
+  Widget _buildAiResponseBlock(String response) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Copy button at the top-right
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              icon: const Icon(Icons.copy),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: response));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Response copied to clipboard')),
+                );
+              },
+              tooltip: 'Copy to Clipboard',
+            ),
+          ),
+          // Code block style container for AI response
+          Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[850]
+                  : Colors.grey[300], // Dark background for dark mode
+              borderRadius: BorderRadius.circular(8.0),
+              border: Border.all(
+                color: Colors.grey.shade700,
+              ),
+            ),
+            child: SelectableText(
+              response,
+              style: const TextStyle(
+                fontFamily: 'monospace', // Monospace font for code block style
+                fontSize: 14.0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ///////////////////////////////
+  // Build Loading Indicator
+  ///////////////////////////////
+
+  Widget _buildLoadingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Assistant'),
+          const SizedBox(width: 8),
+          const LoadingDots(),
+          const SizedBox(width: 16),
+          ElevatedButton(
+            onPressed: _stopGptResponse,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: const CircleBorder(),
+              padding: const EdgeInsets.all(16),
+            ),
+            child: const Icon(Icons.stop, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  //////////////////////////////
+  // Build User Input Area
+  //////////////////////////////
+
+  Widget _buildUserInputArea() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Stack(
+        children: [
+          Focus(
+            onKeyEvent: (FocusNode node, KeyEvent event) {
+              if (event is KeyDownEvent) {
+                if (event.logicalKey == LogicalKeyboardKey.enter) {
+                  if (HardwareKeyboard.instance.isShiftPressed) {
+                    final currentText = _chatController.text;
+                    final newText = '$currentText\n';
+                    _chatController.text = newText;
+                    _chatController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _chatController.text.length),
+                    );
+                    return KeyEventResult.handled;
+                  } else {
+                    _handleGptInput();
+                    return KeyEventResult.handled;
+                  }
+                }
+              }
+              return KeyEventResult.ignored;
+            },
+            child: TextField(
+              controller: _chatController,
+              maxLines: 5,
+              minLines: 1,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Chat with Assistant...',
+                contentPadding: EdgeInsets.fromLTRB(12, 12, 48, 12),
+              ),
+              textInputAction: TextInputAction.newline,
+            ),
+          ),
+          Positioned(
+            right: 4,
+            bottom: 4,
+            child: IconButton(
+              icon: const Icon(Icons.send),
+              onPressed: _handleGptInput,
+              splashRadius: 24.0,
+            ),
           ),
         ],
       ),

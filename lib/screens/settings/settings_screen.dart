@@ -19,6 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _storage = const FlutterSecureStorage(); // Secure storage instance
 
   int _totalTokensUsed = 0;
+  double _costPerThousandTokens = 0.002; // Update based on your model's cost
 
   @override
   void initState() {
@@ -49,12 +50,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Calculate the cost based on token usage
   double _calculateCost() {
-    double costPerThousandTokens =
-        0.002; // Assuming GPT-3.5 cost here, change for other models if needed
-    return (_totalTokensUsed / 1000) * costPerThousandTokens;
+    return (_totalTokensUsed / 1000) * _costPerThousandTokens;
   }
 
-// Save the OpenAI API key to secure storage
+  // Save token usage to SharedPreferences
+  Future<void> _saveTokenUsage(int tokens) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _totalTokensUsed += tokens;
+    await prefs.setInt('totalTokensUsed', _totalTokensUsed);
+  }
+
+  // Function to add token usage, should be called from the chat processing code
+  void addTokenUsage(int tokensUsed) {
+    setState(() {
+      _saveTokenUsage(tokensUsed);
+    });
+  }
+
+  // Save the OpenAI API key to secure storage
   Future<void> _saveApiKey() async {
     await _storage.write(key: 'openai_api_key', value: _apiKeyController.text);
     setState(() {
@@ -133,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
             const Divider(),
-            // Add the token usage and cost details here
+            // Token usage and cost details section
             const Text(
               'OpenAI Usage:',
               style: TextStyle(fontSize: 20),

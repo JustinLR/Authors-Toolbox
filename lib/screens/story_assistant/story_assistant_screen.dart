@@ -63,12 +63,29 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
   // Initialize Chat Data
   ////////////////////////
 
-  void _initializeChatData() async {
+  Future<void> _initializeChatData() async {
     await _loadSavedChats();
     await _loadCurrentChatId();
     await _loadCharacterCardFromStorage();
     if (_currentChatId == null || _currentChatId!.isEmpty) {
       _startNewChat();
+    }
+  }
+  /////////////////////////////
+  // Load Saved Chats from Storage
+  /////////////////////////////
+
+  Future<void> _loadSavedChats() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedChatsJson = prefs.getString('savedChats');
+    if (savedChatsJson != null) {
+      setState(() {
+        _savedChats = Map<String, List<String>>.from(
+          jsonDecode(savedChatsJson).map(
+            (key, value) => MapEntry(key, List<String>.from(value)),
+          ),
+        );
+      });
     }
   }
 
@@ -85,24 +102,6 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
     await prefs.setString('currentChatId', _currentChatId ?? '');
     if (_model != null) {
       await prefs.setString('characterCard', jsonEncode(_model!.toJson()));
-    }
-  }
-
-  /////////////////////////////
-  // Load Saved Chats from Storage
-  /////////////////////////////
-
-  Future<void> _loadSavedChats() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? savedChatsJson = prefs.getString('savedChats');
-    if (savedChatsJson != null) {
-      setState(() {
-        _savedChats = Map<String, List<String>>.from(
-          jsonDecode(savedChatsJson).map(
-            (key, value) => MapEntry(key, List<String>.from(value)),
-          ),
-        );
-      });
     }
   }
 
@@ -132,7 +131,8 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
     String? characterCardJson = prefs.getString('characterCard');
     if (characterCardJson != null) {
       setState(() {
-        _model = Model.fromJson(jsonDecode(characterCardJson));
+        _model = Model.fromJson(
+            jsonDecode(characterCardJson)); // Load character card
       });
     }
   }
@@ -172,11 +172,89 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
     return apiKey;
   }
 
+  bool isConversationalInput(String input) {
+    // List of common conversational phrases
+    List<String> conversationalPhrases = [
+      "good morning",
+      "hi",
+      "hello",
+      "can you help me",
+      "I'm stuck",
+      "how are you",
+      "what's up",
+      "hey",
+      "how's it going"
+    ];
+
+    // Normalize input to lowercase to make matching case-insensitive
+    input = input.toLowerCase().trim();
+
+    return conversationalPhrases.any((phrase) => input.contains(phrase));
+  }
+
+  String _getConversationalResponse(String input) {
+    // Return a humanoid response based on the input
+    if (input.contains("good morning")) {
+      return "Good morning! How can I help you today?";
+    } else if (input.contains("hi") ||
+        input.contains("hello") ||
+        input.contains("hey")) {
+      return "Hi there! How's it going?";
+    } else if (input.contains("can you help me") ||
+        input.contains("I'm stuck")) {
+      return "Of course! What are you stuck on? I'll help you through it.";
+    } else if (input.contains("how are you")) {
+      return "I'm doing great, thanks for asking! How about you?";
+    } else if (input.contains("what's up") ||
+        input.contains("how's it going")) {
+      return "Not much, just here to help! What's up with you?";
+    }
+
+    return "Hey! How can I assist you today?"; // Default response
+  }
+
+  String _getMemoryResponse() {
+    if (_savedChats.isEmpty) {
+      // If no previous context exists
+      return "I'm afraid I don't have any previous context or instructions from you to refer back to. It seems this may be our first interaction in this conversation. Please feel free to provide the manuscript or text you'd like me to review and edit, along with any specific instructions or preferences you have. I'm happy to help refine the writing while preserving the original voice and style as much as possible. Just send over the details whenever you're ready!";
+    } else {
+      // If there is previous context, return the last conversation's context
+      String lastConversation = _chatHistory.isNotEmpty
+          ? _chatHistory.last
+          : "I remember our previous conversation. What would you like to do next?";
+      return "Yes, I remember our previous conversation. Here's what we last discussed: $lastConversation";
+    }
+  }
+
 ////////////////////////////
 // Send to GPT Stream
 ////////////////////////////
 
   Future<void> _sendToGptStream(String input) async {
+    // Check if the input is a conversational input (e.g., greeting, asking if it remembers)
+    if (isConversationalInput(input)) {
+      // If user asks if the assistant remembers
+      if (input.toLowerCase().contains("remember")) {
+        String response = _getMemoryResponse();
+        _addToChatHistory('Assistant: $response');
+        _completeLoading();
+        return; // Skip the regular GPT processing for memory-related queries
+      }
+
+      // Handle other conversational responses (greetings, etc.)
+      String response = _getConversationalResponse(input);
+      _addToChatHistory('Assistant: $response');
+      _completeLoading();
+      return; // Skip the GPT request for this input
+    }
+
+    // Log or process if the input is explicit, but do not refuse it.
+    if (_isExplicitContent(input)) {
+      print("Explicit content detected.");
+      // You can log or handle the explicit content if you need to.
+    }
+
+    // Proceed with regular GPT processing for all inputs (including explicit content)
     String? apiKey = await _getApiKey();
     if (apiKey == null) {
       _addToChatHistory('Error: API key not found.');
@@ -231,6 +309,12 @@ class _StoryAssistantScreenState extends State<StoryAssistantScreen>
     } finally {
       _completeLoading();
     }
+  }
+
+  bool _isExplicitContent(String input) {
+    // Simple check for explicit content. Customize this as needed.
+    return input.toLowerCase().contains('erotic') ||
+        input.toLowerCase().contains('explicit');
   }
 
   Future<void> _streamChatResponse({

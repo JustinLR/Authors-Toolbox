@@ -10,8 +10,6 @@ Welcome to Bureau of Sins, your repository for a collection of powerful authorin
   - [Character Creator](#character-creator)
   - [Book Hub](#book-hub)
   - [Summarizer](#summarizer)
-- [Getting Started](#getting-started)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Introduction
@@ -36,29 +34,10 @@ Allows users to organize and access their collection of books. It provides a use
 
 The Summarizer tool is a time-saving solution for summarizing your written content. Whether you need a quick overview of your book or want to condense your research notes, the Summarizer can help you extract key points efficiently.
 
-## Getting Started
-
-To get started with Bureau of Sins, follow these steps:
-
-1. Clone the repository to your local machine:
-
-   ```
-   git clone https://github.com/JustinLR/Authors-Toolbox.git
-   ```
-
-2. Explore the individual tool directories for detailed instructions and usage guidelines.
-
-3. To launch the Authors Toolbox and access the suite of authoring tools, simply run `authors-toolbox.exe` or the appropriate command, as explained in the Authors Toolbox documentation.
-
-4. Start using the tools to enhance your writing process.
-
-## Contributing
-
-We welcome contributions from the community! If you have ideas for new tools or improvements to existing ones, please open an issue or submit a pull request. Check our [Contribution Guidelines](CONTRIBUTING.md) for more information on how to contribute.
+---
 
 ## License
-
-Bureau of Sins is open-source and licensed under the [GPT-3.0 License](LICENSE). Feel free to use, modify, and share these tools as needed, but please provide attribution to the original repository and adhere to the license terms.
+This project is proprietary. Unauthorized use, modification, or distribution of the code or assets is prohibited. For inquiries about permissions, please contact [justinlrichards92@gmail.com].
 
 ---
 

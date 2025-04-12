@@ -1,6 +1,6 @@
 ![Bureau of Sins Logo](https://github.com/JustinLR/Authors-Toolbox/blob/main/public/assets/img/Banner.png)
 
-Welcome to Bureau of Sins, your repository for a collection of powerful authoring tools designed to streamline your creative process. Whether you're creating characters, managing book projects, summarizing content, or using any of our other tools, Bureau of Sins has what you need.
+Welcome to Authors Toolbox, your repository for a collection of powerful authoring tools designed to streamline your creative process. Whether you're creating characters, managing book projects, summarizing content, or using any of our other tools, Bureau of Sins has what you need.
 
 ## Table of Contents
 
